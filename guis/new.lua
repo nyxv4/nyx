@@ -94,7 +94,7 @@ local getcustomassets = {
 	['mxtionv4/assets/new/guislider.png'] = 'rbxassetid://14368320020',
 	['mxtionv4/assets/new/guisliderrain.png'] = 'rbxassetid://14368321228',
 	['mxtionv4/assets/new/guiv4.png'] = 'rbxassetid://138935172340460',
-	['mxtionv4/assets/new/textvape.png'] = 'rbxassetid://105267933833921'
+	['mxtionv4/assets/new/textvape.png'] = 'rbxassetid://105267933833921',
 	['mxtionv4/assets/new/guivape.png'] = 'rbxassetid://105267933833921',
 	['mxtionv4/assets/new/info.png'] = 'rbxassetid://14368324807',
 	['mxtionv4/assets/new/inventoryicon.png'] = 'rbxassetid://14928011633',
@@ -131,7 +131,7 @@ local getcustomassets = {
 	['mxtionv4/assets/new/warning.png'] = 'rbxassetid://14368361552',
 	['mxtionv4/assets/new/worldicon.png'] = 'rbxassetid://14368362492'
 }
-
+	
 local isfile = isfile or function(file)
 	local suc, res = pcall(function()
 		return readfile(file)
