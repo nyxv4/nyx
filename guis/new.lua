@@ -6851,7 +6851,7 @@ createPublicProfilesWindow = function()
 	logo.Size = UDim2.fromOffset(150, 50)
 	logo.Position = UDim2.fromOffset(-18, 2)
 	logo.BackgroundTransparency = 1
-	logo.Image = getcustomasset('mxtionv4/assets/new/guivape.png')
+	logo.Image = getcustomasset('mxtionv4/assets/new/textvape.png')
 	logo.Parent = window
 
 	local logov4 = Instance.new('ImageLabel')
