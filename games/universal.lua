@@ -16,14 +16,31 @@ end
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/nyxv4/nyx/main/'..select(1, path:gsub('mxtionv4/', '')), true)
+			local response = request({
+				Url = 'https://raw.githubusercontent.com/nyxv4/nyx/main/'..select(1, path:gsub('mxtionv4/', '')),
+				Method = 'GET'
+			})
+
+			if response.StatusCode ~= 200 then
+				error('HTTP '..tostring(response.StatusCode))
+			end
+
+			return response.Body
 		end)
-		if not suc or res == '404: Not Found' then
+
+		if not suc or not res then
 			error(res)
 		end
+
 		if path:find('.lua') then
 			res = '--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.\n'..res
 		end
+
+		writefile(path, res)
+	end
+
+	return (func or readfile)(path)
+end
 		writefile(path, res)
 	end
 	return (func or readfile)(path)
