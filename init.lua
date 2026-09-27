@@ -6,7 +6,7 @@ license.Key = license.Key or '_key'
 -- AUTO UPDATE LOGIC
 local function getLatestCommit()
 	if shared.mxtion_checked then
-		return readfile("mxtionv4/profiles/commit.txt")
+		return readfile("NYX/profiles/commit.txt")
 	end
 	local suc, res = pcall(function()
 		return game:HttpGet("https://api.github.com/repos/nyxv4/nyx/commits/main")
@@ -24,8 +24,8 @@ end
 local function handleUpdates()
 	local latestCommit = getLatestCommit()
 	local currentCommit = ""
-	if isfile("mxtionv4/profiles/commit.txt") then
-		currentCommit = readfile("mxtionv4/profiles/commit.txt")
+	if isfile("NYX/profiles/commit.txt") then
+		currentCommit = readfile("NYX/profiles/commit.txt")
 	end
 	
 	if latestCommit ~= "main" and latestCommit ~= currentCommit then
@@ -39,12 +39,12 @@ local function handleUpdates()
 				end
 			end
 		end
-		clearFolder("mxtionv4/guis")
-		clearFolder("mxtionv4/games")
-		clearFolder("mxtionv4/libraries")
+		clearFolder("NYX/guis")
+		clearFolder("NYX/games")
+		clearFolder("NYX/libraries")
 		
-		if not isfolder("mxtionv4/profiles") then makefolder("mxtionv4/profiles") end
-		writefile("mxtionv4/profiles/commit.txt", latestCommit)
+		if not isfolder("NYX/profiles") then makefolder("NYX/profiles") end
+		writefile("NYX/profiles/commit.txt", latestCommit)
 		
 		-- Trigger the Vape update notification
 		if currentCommit ~= "" and currentCommit ~= "main" then
@@ -84,7 +84,7 @@ local httpService = cloneref(game:GetService("HttpService"))
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/nyxv4/nyx/'..readfile('mxtionv4/profiles/commit.txt')..'/'..select(1, path:gsub('mxtionv4/', '')), true)
+			return game:HttpGet('https://raw.githubusercontent.com/nyxv4/nyx/'..readfile('NYX/profiles/commit.txt')..'/'..select(1, path:gsub('NYX/', '')), true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
@@ -100,7 +100,7 @@ end
 local function finishLoading()
 	vape.Init = nil
 	if not vape.Load then
-		warn('[mxtionv4] vape.Load is nil skipping load')
+		warn('[NYX] vape.Load is nil skipping load')
 		return
 	end
 	vape:Load()
@@ -112,15 +112,15 @@ local function finishLoading()
 		until vape.Loaded == nil
 	end))
 
-	-- Exact Aerov4 Teleport Queue implementation adapted for mxtionV4
+	-- Exact Aerov4 Teleport Queue implementation adapted for NYX
 	local function buildTeleportScript()
 		if shared.VapeIndependent then return nil end
 
 		local teleportScript = [[
 			repeat task.wait() until game:IsLoaded()
 			shared.vapereload = true
-			if isfile and isfile("mxtionv4/init.lua") then
-				loadstring(readfile("mxtionv4/init.lua"), "init.lua")(_scriptconfig)
+			if isfile and isfile("NYX/init.lua") then
+				loadstring(readfile("NYX/init.lua"), "init.lua")(_scriptconfig)
 			else
 				loadstring(game:HttpGet("https://raw.githubusercontent.com/nyxv4/nyx/main/init.lua"), "init.lua")(_scriptconfig)
 			end
@@ -176,22 +176,22 @@ local function finishLoading()
 			vape:CreateNotification('NYX', ... (getgenv().mxtionname and `Authenticated as {getgenv().mxtionname} with {getgenv().mxtionrole}, ` or '').. (vape.VapeButton and 'Press the button in the top right' or 'Press '..table.concat(vape.Keybind, ' + '):upper())..' to open GUI', 5)
 			task.delay(0.05 + cloneref(game:GetService('RunService')).PostSimulation:Wait(), function()
 				if shared.updated then
-					vape:CreateNotification('NYX', ... `Script has updated from {shared.updated} to {readfile('mxtionv4/profiles/commit.txt'):sub(1, 7)}`, 10, 'info')
+					vape:CreateNotification('NYX', ... `Script has updated from {shared.updated} to {readfile('NYX/profiles/commit.txt'):sub(1, 7)}`, 10, 'info')
 				end
 			end)
 		end	
 	end
 end
 
-if not isfile('mxtionv4/profiles/gui.txt') then
-	writefile('mxtionv4/profiles/gui.txt', 'new')
+if not isfile('NYX/profiles/gui.txt') then
+	writefile('NYX/profiles/gui.txt', 'new')
 end
-local gui = 'new'--readfile('mxtionv4/profiles/gui.txt')
+local gui = 'new'--readfile('NYX/profiles/gui.txt')
 
-if not isfolder('mxtionv4/assets/'..gui) then
-	makefolder('mxtionv4/assets/'..gui)
+if not isfolder('NYX/assets/'..gui) then
+	makefolder('NYX/assets/'..gui)
 end
-vape = loadstring(downloadFile('mxtionv4/guis/'..gui..'.lua'), 'gui')(license)
+vape = loadstring(downloadFile('NYX/guis/'..gui..'.lua'), 'gui')(license)
 shared.vape = vape
 shared.vapesmooth = true
 _G.vape = vape
@@ -213,23 +213,23 @@ if not shared.VapeIndependent then
 	if not game:IsLoaded() then
 		repeat task.wait() until game:IsLoaded()
 	end
-	loadstring(downloadFile('mxtionv4/games/universal.lua'), 'universal')(license)
+	loadstring(downloadFile('NYX/games/universal.lua'), 'universal')(license)
 	local scriptId = (game.PlaceId == 6872265039 and '6872265039') or (game.GameId == 2619619496 and '6872274481') or tostring(game.GameId)
-	if isfile('mxtionv4/games/'..scriptId..'.lua') then
-		loadstring(readfile('mxtionv4/games/'..scriptId..'.lua'), scriptId)(license)
+	if isfile('NYX/games/'..scriptId..'.lua') then
+		loadstring(readfile('NYX/games/'..scriptId..'.lua'), scriptId)(license)
 	else
 		if not shared.VapeDeveloper then
 			local suc, res = pcall(function()
-				return game:HttpGet('https://raw.githubusercontent.com/nyxv4/nyx/'..readfile('mxtionv4/profiles/commit.txt')..'/games/'..scriptId..'.lua', true)
+				return game:HttpGet('https://raw.githubusercontent.com/nyxv4/nyx/'..readfile('NYX/profiles/commit.txt')..'/games/'..scriptId..'.lua', true)
 			end)
 			if suc and res ~= '404: Not Found' then
-				loadstring(downloadFile('mxtionv4/games/'..scriptId..'.lua'), scriptId)(license)
+				loadstring(downloadFile('NYX/games/'..scriptId..'.lua'), scriptId)(license)
 			end
 		end
 	end
-	loadstring(downloadFile('mxtionv4/libraries/premium.lua'), 'premium')(license)
+	loadstring(downloadFile('NYX/libraries/premium.lua'), 'premium')(license)
 	pcall(function()
-		local publib = loadstring(downloadFile('mxtionv4/libraries/publicconfigs.lua'), 'publicconfigs')(license)
+		local publib = loadstring(downloadFile('NYX/libraries/publicconfigs.lua'), 'publicconfigs')(license)
 		if publib and vape then
 			vape.Libraries = vape.Libraries or {}
 			vape.Libraries.publicconfigs = publib
