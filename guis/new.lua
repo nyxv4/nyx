@@ -6851,7 +6851,7 @@ createPublicProfilesWindow = function()
 	logo.Size = UDim2.fromOffset(150, 50)
 	logo.Position = UDim2.fromOffset(-18, 2)
 	logo.BackgroundTransparency = 1
-	logo.Image = getcustomasset('mxtionv4/assets/new/textvape.png')
+	logo.Image = 'rbxassetid://105267933833921'
 	logo.Parent = window
 
 	local logov4 = Instance.new('ImageLabel')
@@ -7684,7 +7684,7 @@ VapeLogo.BackgroundTransparency = 1
 VapeLogo.BorderSizePixel = 0
 VapeLogo.Visible = false
 VapeLogo.BackgroundColor3 = Color3.new()
-VapeLogo.Image = getcustomasset('mxtionv4/assets/new/textvape.png')
+Vapelogo.Image = 'rbxassetid://105267933833921'
 VapeLogo.Parent = textgui.Children
 
 local lastside = textgui.Children.AbsolutePosition.X > (gui.AbsoluteSize.X / 2)
