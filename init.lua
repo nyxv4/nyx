@@ -1,5 +1,5 @@
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
-local license = ... or {}
+local license = _G.NYX_LICENSE or {}
 if shared.vape then shared.vape:Uninject() end
 license.Key = license.Key or '_key'
 
