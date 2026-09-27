@@ -2609,25 +2609,10 @@ function mainapi:CreateGUI()
 	addBlur(window)
 	addCorner(window)
 	makeDraggable(window)
-	local logo = Instance.new('ImageLabel')
-	logo.Name = 'VapeLogo'
-	logo.Size = UDim2.fromOffset(155, 40)
-	logo.Position = UDim2.fromOffset(-16, 2)
-	logo.BackgroundTransparency = 1
-	logo.Image = getcustomasset('mxtionv4/assets/new/guivape.png')
-	logo.ImageColor3 = select(3, uipallet.Main:ToHSV()) > 0.5 and uipallet.Text or Color3.new(1, 1, 1)
-	logo.ScaleType = Enum.ScaleType.Fit
-	logo.Parent = window
-	local logov4 = Instance.new('ImageLabel')
-	logov4.Name = 'V4Logo'
-	logov4.Size = UDim2.fromOffset(32, 18)
-	logov4.Position = UDim2.new(0, 124, 0, 11)
-	logov4.BackgroundTransparency = 1
-	logov4.Image = getcustomasset('mxtionv4/assets/new/guiv4.png')
-	logov4.ImageRectOffset = Vector2.new(147, 29)
-	logov4.ImageRectSize = Vector2.new(39, 23)
-	logov4.ScaleType = Enum.ScaleType.Fit
-	logov4.Parent = logo
+local logo = Instance.new('ImageLabel')
+logo.Name = 'VapeLogo'
+logo.Visible = false
+logo.Parent = window
 	local children = Instance.new('Frame')
 	children.Name = 'Children'
 	children.Size = UDim2.new(1, 0, 1, -33)
