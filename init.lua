@@ -9,7 +9,7 @@ local function getLatestCommit()
 		return readfile("mxtionv4/profiles/commit.txt")
 	end
 	local suc, res = pcall(function()
-		return game:HttpGet("https://api.github.com/repos/GlockSwitchMotion/mxtionV4/commits/main")
+		return game:HttpGet("https://api.github.com/repos/nyxv4/nyx/commits/main")
 	end)
 	if suc and res then
 		local sha = res:match('"sha":"(.-)"')
@@ -84,7 +84,7 @@ local httpService = cloneref(game:GetService("HttpService"))
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/GlockSwitchMotion/mxtionV4/'..readfile('mxtionv4/profiles/commit.txt')..'/'..select(1, path:gsub('mxtionv4/', '')), true)
+			return game:HttpGet('https://raw.githubusercontent.com/nyxv4/nyx/'..readfile('mxtionv4/profiles/commit.txt')..'/'..select(1, path:gsub('mxtionv4/', '')), true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
@@ -122,7 +122,7 @@ local function finishLoading()
 			if isfile and isfile("mxtionv4/init.lua") then
 				loadstring(readfile("mxtionv4/init.lua"), "init.lua")(_scriptconfig)
 			else
-				loadstring(game:HttpGet("https://raw.githubusercontent.com/GlockSwitchMotion/mxtionV4/main/init.lua"), "init.lua")(_scriptconfig)
+				loadstring(game:HttpGet("https://raw.githubusercontent.com/nyxv4/nyx/main/init.lua"), "init.lua")(_scriptconfig)
 			end
 		]]
 
@@ -220,7 +220,7 @@ if not shared.VapeIndependent then
 	else
 		if not shared.VapeDeveloper then
 			local suc, res = pcall(function()
-				return game:HttpGet('https://raw.githubusercontent.com/GlockSwitchMotion/mxtionV4/'..readfile('mxtionv4/profiles/commit.txt')..'/games/'..scriptId..'.lua', true)
+				return game:HttpGet('https://raw.githubusercontent.com/nyxv4/nyx/'..readfile('mxtionv4/profiles/commit.txt')..'/games/'..scriptId..'.lua', true)
 			end)
 			if suc and res ~= '404: Not Found' then
 				loadstring(downloadFile('mxtionv4/games/'..scriptId..'.lua'), scriptId)(license)
