@@ -176,7 +176,7 @@ local function finishLoading()
 			vape:CreateNotification('NYX', (getgenv().mxtionname and `Authenticated as {getgenv().mxtionname} with {getgenv().mxtionrole}, ` or '').. (vape.VapeButton and 'Press the button in the top right' or 'Press '..table.concat(vape.Keybind, ' + '):upper())..' to open GUI', 5)
 			task.delay(0.05 + cloneref(game:GetService('RunService')).PostSimulation:Wait(), function()
 				if shared.updated then
-					vape:CreateNotification('NYX', ... `Script has updated from {shared.updated} to {readfile('NYX/profiles/commit.txt'):sub(1, 7)}`, 10, 'info')
+					vape:CreateNotification('NYX', `Script has updated from {shared.updated} to {readfile('NYX/profiles/commit.txt'):sub(1, 7)}`, 10, 'info')
 				end
 			end)
 		end	
