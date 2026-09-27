@@ -112,7 +112,7 @@ function publicconfigs.Upload(configName, placeId, profileData, authorName)
 	local payload = httpService:JSONEncode({
 		name = configName,
 		author = author,
-		description = "Uploaded from MxtionV4",
+		description = "Uploaded from NYX",
 		game = place,
 		data = dataStr
 	})
@@ -145,7 +145,7 @@ function publicconfigs.Download(configEntry, mainapi)
 
 	local configName = configEntry.name or "PublicConfig"
 	local placeStr = mainapi and mainapi.Place or tostring(game.PlaceId)
-	local filename = "mxtionv4/profiles/" .. configName .. placeStr .. ".txt"
+	local filename = "NYX/profiles/" .. configName .. placeStr .. ".txt"
 
 	local dataStr
 	if type(configEntry.data) == "table" then
@@ -155,8 +155,8 @@ function publicconfigs.Download(configEntry, mainapi)
 	end
 
 	local suc, err = pcall(function()
-		if not isfolder("mxtionv4/profiles") then
-			makefolder("mxtionv4/profiles")
+		if not isfolder("NYX/profiles") then
+			makefolder("NYX/profiles")
 		end
 		writefile(filename, dataStr)
 	end)
