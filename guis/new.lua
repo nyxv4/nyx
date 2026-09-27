@@ -7685,7 +7685,7 @@ VapeLogo.BackgroundTransparency = 1
 VapeLogo.BorderSizePixel = 0
 VapeLogo.Visible = false
 VapeLogo.BackgroundColor3 = Color3.new()
-Vapelogo.Image = getcustomasset('mxtionv4/assets/new/guivape.png')
+VapeLogo.Image = getcustomasset('mxtionv4/assets/new/guivape.png')
 VapeLogo.Parent = textgui.Children
 
 local lastside = textgui.Children.AbsolutePosition.X > (gui.AbsoluteSize.X / 2)
