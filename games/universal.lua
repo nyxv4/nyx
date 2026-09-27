@@ -1,8 +1,10 @@
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
+local originalLoadstring = loadstring
+
 local loadstring = function(...)
-	local res, err = loadstring(...)
+	local res, err = originalLoadstring(...)
 	if err and vape then
-		vape:CreateNotification('Vape', 'Failed to load : '..err, 30, 'alert')
+		vape:CreateNotification('NYX', 'Failed to load : '..err, 30, 'alert')
 	end
 	return res
 end
