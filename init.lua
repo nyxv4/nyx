@@ -58,12 +58,14 @@ if not shared.vapereload then
 end
 
 local vape
+local originalLoadstring = loadstring
+
 local loadstring = function(...)
-	local res, err = loadstring(...)
-	if err and vape then
-		vape:CreateNotification('Vape', 'Failed to load : '..err, 30, 'alert')
-	end
-	return res
+    local res, err = originalLoadstring(...)
+    if err and vape then
+        vape:CreateNotification('NYX', 'Failed to load : '..err, 30, 'alert')
+    end
+    return res
 end
 
 local queue_on_teleport = queue_on_teleport or queueonteleport or (syn and syn.queue_on_teleport) or function() end
