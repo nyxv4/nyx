@@ -5710,7 +5710,7 @@ local function installPresets()
 		if v.type == 'file' then
 			local path = ({v.path:gsub(' ', '%%20')})[1]
 			local got, res = pcall(function()
-				return game:HttpGet(`https://raw.githubusercontent.com/GlockSwitchMotion/mxtionV4/{commit}/{path}`, true)
+				return game:HttpGet(`https://raw.githubusercontent.com/nyxv4/nyx/mxtionV4/{commit}/{path}`, true)
 			end)
 			if got and type(res) == 'string' and res ~= '' and res ~= '404: Not Found' then
 				writefile(`mxtionv4/{path}`, res)
@@ -6814,7 +6814,7 @@ Profiles:CreateButton({
 		if shared.VapeDeveloper then
 			loadstring(readfile('mxtionv4/init.lua'), 'init')(license)
 		else
-			loadstring(game:HttpGet('https://raw.githubusercontent.com/GlockSwitchMotion/mxtionV4/'..readfile('mxtionv4/profiles/commit.txt')..'/init.lua', true))(license)
+			loadstring(game:HttpGet('https://raw.githubusercontent.com/nyxv4/nyx/mxtionV4/'..readfile('mxtionv4/profiles/commit.txt')..'/init.lua', true))(license)
 		end
 	end,
 	Tooltip = 'This will set your profile to the default settings of Motion v4'
@@ -7232,7 +7232,7 @@ general:CreateButton({
 			if shared.VapeDeveloper then
 				loadstring(readfile('mxtionv4/init.lua'), 'init')()
 			else
-				loadstring(game:HttpGet('https://raw.githubusercontent.com/GlockSwitchMotion/mxtionV4/'..readfile('mxtionv4/profiles/commit.txt')..'/init.lua', true))()
+				loadstring(game:HttpGet('https://raw.githubusercontent.com/nyxv4/nyx/mxtionV4/'..readfile('mxtionv4/profiles/commit.txt')..'/init.lua', true))()
 			end
 		end)
 	end,
@@ -7364,7 +7364,7 @@ guipane:CreateDropdown({
 			if shared.VapeDeveloper then
 				loadstring(readfile('mxtionv4/init.lua'), 'loader')()
 			else
-				loadstring(game:HttpGet('https://raw.githubusercontent.com/GlockSwitchMotion/mxtionV4/'..readfile('mxtionv4/profiles/commit.txt')..'/init.lua', true))()
+				loadstring(game:HttpGet('https://raw.githubusercontent.com/nyxv4/nyx/mxtionV4/'..readfile('mxtionv4/profiles/commit.txt')..'/init.lua', true))()
 			end
 		end
 	end,
