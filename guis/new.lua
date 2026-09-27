@@ -5694,7 +5694,7 @@ local function installPresets()
 	end
 
 	local suc, req = pcall(request, {
-		Url = 'https://api.github.com/repos/GlockSwitchMotion/mxtionV4/contents/profiles',
+		Url = 'https://api.github.com/repos/nyxv4/nyx/contents/profiles',
 		Method = 'GET'
 	})
 	if not suc or not req or req.StatusCode ~= 200 then return false end
