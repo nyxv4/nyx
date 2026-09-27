@@ -168,7 +168,7 @@ local function finishLoading()
 
 	if not shared.vapereload then
 		if getgenv().mxtionrole == 'HWID MISMATCH' then
-			vape:CreateNotification('NYX', ... 'HWID MISMATCH, Go to the script panel to reset hwid', 25, 'alert')
+			vape:CreateNotification('NYX', 'HWID MISMATCH, Go to the script panel to reset hwid', 25, 'alert')
 			getgenv().mxtionrole = ''
 			task.wait(0.1)
 		end
