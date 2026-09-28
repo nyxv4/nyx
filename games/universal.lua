@@ -30,6 +30,7 @@ local function downloadFile(path, func)
 
 		if not suc or not res then
 			error(res)
+		
 		end
 
 		if path:find('.lua') then
