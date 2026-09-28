@@ -198,7 +198,6 @@ shared.vape = vape
 shared.vapesmooth = true
 _G.vape = vape
 getgenv().used_init = true
-
 if hookmetamethod and not getgenv().run then
 	getgenv().run = true
 	local old; old = hookmetamethod(game, '__namecall', function(self, Remote, ...)
