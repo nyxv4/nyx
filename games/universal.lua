@@ -43,7 +43,9 @@ local function downloadFile(path, func)
 	return (func or readfile)(path)
 end
 		writefile(path, res)
+
 	end
+
 	return (func or readfile)(path)
 end
 local run = function(func)
