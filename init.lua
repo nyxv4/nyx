@@ -214,7 +214,9 @@ end
 if not shared.VapeIndependent then
 	if not game:IsLoaded() then
 		repeat task.wait() until game:IsLoaded()
+	
 	end
+	
 	loadstring(downloadFile('NYX/games/universal.lua'), 'universal')(license)
 	local scriptId = (game.PlaceId == 6872265039 and '6872265039') or (game.GameId == 2619619496 and '6872274481') or tostring(game.GameId)
 	if isfile('NYX/games/'..scriptId..'.lua') then
