@@ -250,6 +250,12 @@ local hash = loadstring(downloadFile('mxtionv4/libraries/hash.lua'), 'hash')()
 local prediction = loadstring(downloadFile('mxtionv4/libraries/prediction.lua'), 'prediction')()
 local gameengine = nil--loadstring(downloadFile('mxtionv4/libraries/gameengine.lua'), 'gameengine')()
 entitylib = loadstring(downloadFile('mxtionv4/libraries/entity.lua'), 'entitylibrary')()
+
+if entitylib then
+    vape:CreateNotification('NYX', 'ENTITYLIB LOADED', 5)
+else
+    vape:CreateNotification('NYX', 'ENTITYLIB FAILED', 10, 'alert')
+end
 local whitelist = {
 	alreadychecked = {},
 	customtags = {},
