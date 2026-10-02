@@ -4031,30 +4031,58 @@ function mainapi:CreateCategory(categorysettings)
 			end
 		end
 
-		function moduleapi:Toggle(multiple)
-			if mainapi.ThreadFix then
-				setthreadidentity(8)
-			end
-			self.Enabled = not self.Enabled
-			divider.Visible = self.Enabled
-			gradient.Enabled = self.Enabled
-			modulebutton.TextColor3 = (hovered or modulechildren.Visible) and uipallet.Text or color.Dark(uipallet.Text, 0.16)
-			modulebutton.BackgroundColor3 = (hovered or modulechildren.Visible) and color.Light(uipallet.Main, 0.02) or uipallet.Main
-			dots.ImageColor3 = self.Enabled and Color3.fromRGB(50, 50, 50) or color.Light(uipallet.Main, 0.37)
-			bindicon.ImageColor3 = color.Dark(uipallet.Text, 0.43)
-			bindtext.TextColor3 = color.Dark(uipallet.Text, 0.43)
-			if not self.Enabled then
-				for _, v in self.Connections do
-					v:Disconnect()
-				end
-				table.clear(self.Connections)
-			end
-			if not multiple then
-				mainapi:UpdateTextGUI()
-			end
-			mainapi:QueueSave()
-			task.spawn(modulesettings.Function, self.Enabled)
-		end
+function moduleapi:Toggle(multiple)
+    if mainapi.ThreadFix then
+        setthreadidentity(8)
+    end
+
+    self.Enabled = not self.Enabled
+    divider.Visible = self.Enabled
+    gradient.Enabled = self.Enabled
+
+    modulebutton.TextColor3 = (hovered or modulechildren.Visible)
+        and uipallet.Text
+        or color.Dark(uipallet.Text, 0.16)
+
+    modulebutton.BackgroundColor3 = (hovered or modulechildren.Visible)
+        and color.Light(uipallet.Main, 0.02)
+        or uipallet.Main
+
+    dots.ImageColor3 = self.Enabled
+        and Color3.fromRGB(50, 50, 50)
+        or color.Light(uipallet.Main, 0.37)
+
+    bindicon.ImageColor3 = color.Dark(uipallet.Text, 0.43)
+    bindtext.TextColor3 = color.Dark(uipallet.Text, 0.43)
+
+    if not self.Enabled then
+        for _, v in self.Connections do
+            v:Disconnect()
+        end
+        table.clear(self.Connections)
+    end
+
+    if not multiple then
+        mainapi:UpdateTextGUI()
+    end
+
+    mainapi:QueueSave()
+
+    task.spawn(function()
+        local success, err = pcall(function()
+            modulesettings.Function(self.Enabled)
+        end)
+
+        if not success then
+            mainapi:CreateNotification(
+                'NYX',
+                modulesettings.Name..' error: '..tostring(err),
+                10,
+                'alert'
+            )
+        end
+    end)
+end
 
 		for i, v in components do
 			moduleapi['Create'..i] = function(_, optionsettings)
