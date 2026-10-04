@@ -23870,167 +23870,179 @@ run(function()
 	})
 end)
 
-run(function()
-	local Nuker
-	local TargetMode
-	local Mode
-	local Range
-	local BreakSpeed
-	local UpdateRate
-	local Bed
-	local BedCheck
-	local LuckyBlock
-	local IronOre
-	local Tesla
-	local Hive
-	local Pinata
-	local Crops
-	local Effect
-	local CustomHealth = {}
-	local Animation
-	local SelfBreak
-	local LimitItem
-	local AutoTool
-	local Snow
-	local ShowPath
-	local BlockHighlight
-	local NukerHighlightColor
-	local NukerAngle
-	local ClearPath
-	local BlockBreakMode
-
-	local blockHighlightInstance
-	local parts = {}
-	local cachedTeammates = {}
-	local cachedTeammatesTime = 0
-	local breakabilityCache = {}
-	local BREAK_CACHE_TTL = 0.35
-
-	local legitRoute = {}
-	local legitTarget = nil
-	local legitAnchor = nil
-	local legitLastPlayerPos = nil
-	local legitLastHit = 0
-
-	local _hbMounted = nil
-	local _hbPart = nil
-	local _hbProgressRef = nil
-	local _hbBlock = nil
-
-	local function screenPoint()
-		if inputService.TouchEnabled then
-			return gameCamera.ViewportSize / 2
+TargetMode = Breaker:CreateDropdown({
+		Name = 'Target Mode',
+		List = {'Distance', 'Health'},
+		Default = 'Distance',
+		Tooltip = 'distance picks the closest block, health picks the weakest one'
+	})
+	Mode = Breaker:CreateDropdown({
+		Name = 'Mode',
+		List = {'Normal', 'Legit'},
+		Default = 'Normal',
+		Tooltip = 'normal digs to the block on its own, legit only breaks what ur cursor is on',
+		Function = function(val)
+			if TargetMode and TargetMode.Object then
+				TargetMode.Object.Visible = val ~= 'Legit'
+			end
+			clearLegit()
 		end
-		return inputService:GetMouseLocation()
-	end
-
-	local function frontPoint()
-		local root = entitylib.character and entitylib.character.RootPart
-		if not root then return nil end
-		local look = gameCamera.CFrame.LookVector * Vector3.new(1, 0, 1)
-		if look.Magnitude < 0.01 then return root.Position end
-		return root.Position + look.Unit * 5
-	end
-
-	local function cleanupHealthbar()
-		if _hbMounted then
-			pcall(bedwars.Roact.unmount, _hbMounted)
-			_hbMounted = nil
+	})
+	Range = Breaker:CreateSlider({
+		Name = 'Break range',
+		Min = 1,
+		Max = 30,
+		Default = 30,
+		Tooltip = 'how far away a block can be for u to hit it'
+	})
+	BreakerAngle = Breaker:CreateSlider({
+		Name = 'Break Angle',
+		Min = 0,
+		Max = 360,
+		Default = 360,
+		Tooltip = 'only digs thru blocks inside this cone in front of ur cam'
+	})
+	BreakSpeed = Breaker:CreateSlider({
+		Name = 'Break speed',
+		Min = 0,
+		Max = 0.3,
+		Default = 0.25,
+		Decimal = 100,
+		Tooltip = 'wait between each hit, lower is faster'
+	})
+	UpdateRate = Breaker:CreateSlider({
+		Name = 'Update rate',
+		Min = 1,
+		Max = 120,
+		Default = 60,
+		Tooltip = 'how often it re checks for blocks, leave it high'
+	})
+	Bed = Breaker:CreateToggle({
+		Name = 'Break Bed',
+		Default = true,
+		Function = function(callback)
+			if BedCheck and BedCheck.Object then
+				BedCheck.Object.Visible = callback
+			end
 		end
-		if _hbPart then
-			pcall(function() _hbPart:Destroy() end)
-			_hbPart = nil
+	})
+	BedCheck = Breaker:CreateToggle({
+		Name = 'Bed Check',
+		Default = false,
+		Darker = true,
+		Tooltip = 'slows down to normal speed once ur actually on the bed'
+	})
+	LuckyBlock = Breaker:CreateToggle({
+		Name = 'Break Lucky Block',
+		Default = true
+	})
+	IronOre = Breaker:CreateToggle({
+		Name = 'Break Iron Ore',
+		Default = true
+	})
+	Snow = Breaker:CreateToggle({
+		Name = 'Break Snow',
+		Default = false
+	})
+	Tesla = Breaker:CreateToggle({
+		Name = 'Break Tesla',
+		Default = true
+	})
+	Hive = Breaker:CreateToggle({
+		Name = 'Break Hive',
+		Default = true
+	})
+	Pinata = Breaker:CreateToggle({
+		Name = 'Break Pinata',
+		Default = false
+	})
+	Crops = Breaker:CreateToggle({
+		Name = 'Break Crops',
+		Default = false,
+		Tooltip = 'breaks farmer cletus crops (carrot and etc)'
+	})
+	Effect = Breaker:CreateToggle({
+		Name = 'Show Healthbar & Effects',
+		Default = true,
+		Function = function(callback)
+			if CustomHealth and CustomHealth.Object then
+				CustomHealth.Object.Visible = callback
+			end
 		end
-		_hbProgressRef = nil
-		_hbBlock = nil
-		local stray = workspace:FindFirstChild('AeroNukerHB')
-		while stray do
-			pcall(function() stray:Destroy() end)
-			stray = workspace:FindFirstChild('AeroNukerHB')
+	})
+	CustomHealth = Breaker:CreateToggle({
+		Name = 'Custom Healthbar',
+		Default = true,
+		Darker = true
+	})
+	Animation = Breaker:CreateToggle({
+		Name = 'Animation',
+		Tooltip = 'plays the swing animation while u dig'
+	})
+	SelfBreak = Breaker:CreateToggle({
+		Name = 'Self Break',
+		Tooltip = 'lets it break ur own bed and blocks u or ur team placed'
+	})
+	AutoTool = Breaker:CreateToggle({
+		Name = 'Auto Tool',
+		Default = true,
+		Tooltip = 'swaps to the right tool on its own, off means it waits till ur holdin it'
+	})
+	LimitItem = Breaker:CreateToggle({
+		Name = 'Limit to items',
+		Tooltip = 'only works while ur holdin sum that can break blocks'
+	})
+	MouseDown = Breaker:CreateToggle({
+		Name = 'Require Mouse Down',
+		Tooltip = 'only digs while u hold left click'
+	})
+	YetiBreaker = Breaker:CreateToggle({
+		Name = 'Yeti Breaker',
+		Tooltip = 'pops the yeti roar whenever ur nuking'
+	})
+	RagnarBreaker = Breaker:CreateToggle({
+		Name = 'Ragnar',
+		Tooltip = 'pops the ragnar rage whenever ur nuking'
+	})
+	ShowPath = Breaker:CreateToggle({
+		Name = 'Show Path',
+		Default = true,
+		Tooltip = 'shows u the blocks its diggin thru'
+	})
+	BlockHighlight = Breaker:CreateToggle({
+		Name = 'Block Highlight',
+		Default = false,
+		Function = function(callback)
+			if BreakerHighlightColor and BreakerHighlightColor.Object then
+				BreakerHighlightColor.Object.Visible = callback
+			end
+			if not callback and blockHighlightInstance then
+				blockHighlightInstance.Adornee = nil
+			end
+		end,
+		Tooltip = 'boxes the block its hittin rn'
+	})
+	BreakerHighlightColor = Breaker:CreateColorSlider({
+		Name = 'Highlight Color',
+		Darker = true,
+		Visible = false
+	})
+	task.defer(function()
+		if CustomHealth and CustomHealth.Object and Effect then
+			CustomHealth.Object.Visible = Effect.Enabled
 		end
-	end
-
-	local function customHealthbar(self, blockRef, health, maxHealth, changeHealth, block)
-		if not Nuker or not Nuker.Enabled or not Effect.Enabled or not CustomHealth.Enabled then return end
-		if not block or not block.Parent then
-			cleanupHealthbar()
-			return
+		if BedCheck and BedCheck.Object and Bed then
+			BedCheck.Object.Visible = Bed.Enabled
 		end
-		if block:GetAttribute('NoHealthbar') then return end
-		if health <= 0 then
-			cleanupHealthbar()
-			return
+		if BreakerHighlightColor and BreakerHighlightColor.Object and BlockHighlight then
+			BreakerHighlightColor.Object.Visible = BlockHighlight.Enabled
 		end
-
-		maxHealth = maxHealth or block:GetAttribute('MaxHealth') or 100
-		health = health or block:GetAttribute('Health') or maxHealth
-
-		if _hbBlock ~= block or not _hbPart or not _hbPart.Parent then
-			cleanupHealthbar()
-			_hbBlock = block
-			local create = bedwars.Roact.createElement
-			local percent = math.clamp(health / maxHealth, 0, 1)
-			_hbProgressRef = bedwars.Roact.createRef()
-			local part = Instance.new('Part')
-			part.Name = 'AeroNukerHB'
-			part.Size = Vector3.one
-			part.CFrame = CFrame.new(block.Position + Vector3.new(0, 1.5, 0))
-			part.Transparency = 1
-			part.Anchored = true
-			part.CanCollide = false
-			part.Parent = workspace
-			_hbPart = part
-			pcall(function() bedwars.QueryUtil:setQueryIgnored(part, true) end)
-
-			local displayName = (bedwars.ItemMeta[block.Name] and bedwars.ItemMeta[block.Name].displayName) or block.Name
-
-			_hbMounted = bedwars.Roact.mount(create('BillboardGui', {
-				Size = UDim2.fromOffset(200, 80),
-				StudsOffset = Vector3.new(0, 2.2, 0),
-				Adornee = part,
-				MaxDistance = 50,
-				AlwaysOnTop = true
-			}, {
-				create('Frame', {
-					Size = UDim2.fromOffset(150, 42),
-					Position = UDim2.fromOffset(25, 20),
-					BackgroundColor3 = Color3.fromRGB(20, 20, 25),
-					BackgroundTransparency = 0.25
-				}, {
-					create('UICorner', {CornerRadius = UDim.new(0, 6)}),
-					create('TextLabel', {
-						Size = UDim2.new(1, -16, 0, 16),
-						Position = UDim2.fromOffset(8, 6),
-						BackgroundTransparency = 1,
-						Text = displayName,
-						TextXAlignment = Enum.TextXAlignment.Left,
-						TextColor3 = Color3.fromRGB(255, 255, 255),
-						TextScaled = true,
-						Font = Enum.Font.GothamBold
-					}),
-					create('Frame', {
-						Size = UDim2.new(1, -16, 0, 6),
-						Position = UDim2.fromOffset(8, 26),
-						BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-					}, {
-						create('UICorner', {CornerRadius = UDim.new(1, 0)}),
-						create('Frame', {
-							[bedwars.Roact.Ref] = _hbProgressRef,
-							Size = UDim2.fromScale(percent, 1),
-							BackgroundColor3 = Color3.fromHSV(math.clamp(percent / 3, 0, 0.35), 0.9, 0.9)
-						}, {create('UICorner', {CornerRadius = UDim.new(1, 0)})})
-					})
-				})
-			}), part)
+		if TargetMode and TargetMode.Object and Mode then
+			TargetMode.Object.Visible = Mode.Value ~= 'Legit'
 		end
+	end)
+end)
 
-		local newpercent = math.clamp((health - (changeHealth or 0)) / maxHealth, 0, 1)
-		if _hbProgressRef and _hbProgressRef:getValue() then
-			tweenService:Create(_hbProgressRef:getValue(), TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-				Size = UDim2.fromScale(newpercent, 1),
-				BackgroundColor3 = Color3.fromHSV(math.clamp(newpercent / 3, 0, 0.35), 0.9, 0.9)
-			}):Play()
-		end
 
 		if newpercent <= 0 then
 			cleanupHealthbar()
