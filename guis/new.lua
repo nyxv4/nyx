@@ -94,8 +94,7 @@ local getcustomassets = {
 	['mxtionv4/assets/new/guislider.png'] = 'rbxassetid://14368320020',
 	['mxtionv4/assets/new/guisliderrain.png'] = 'rbxassetid://14368321228',
 	['mxtionv4/assets/new/guiv4.png'] = 'rbxassetid://138935172340460',
-	['mxtionv4/assets/new/textvape.png'] = 'rbxassetid://105267933833921',
-	['mxtionv4/assets/new/guivape.png'] = 'rbxassetid://105267933833921',
+	['mxtionv4/assets/new/guivape.png'] = 'rbxassetid://108672093407887',
 	['mxtionv4/assets/new/info.png'] = 'rbxassetid://14368324807',
 	['mxtionv4/assets/new/inventoryicon.png'] = 'rbxassetid://14928011633',
 	['mxtionv4/assets/new/legit.png'] = 'rbxassetid://14425650534',
@@ -125,13 +124,13 @@ local getcustomassets = {
 	['mxtionv4/assets/new/targetstab.png'] = 'rbxassetid://14497393895',
 	['mxtionv4/assets/new/textguiicon.png'] = 'rbxassetid://14368355456',
 	['mxtionv4/assets/new/textv4.png'] = 'rbxassetid://138935172340460',
-	['mxtionv4/assets/new/textvape.png'] = 'rbxassetid://105267933833921',
+	['mxtionv4/assets/new/textvape.png'] = 'rbxassetid://108672093407887',
 	['mxtionv4/assets/new/utilityicon.png'] = 'rbxassetid://14368359107',
 	['mxtionv4/assets/new/vape.png'] = 'rbxassetid://108672093407887',
 	['mxtionv4/assets/new/warning.png'] = 'rbxassetid://14368361552',
 	['mxtionv4/assets/new/worldicon.png'] = 'rbxassetid://14368362492'
 }
-	
+
 local isfile = isfile or function(file)
 	local suc, res = pcall(function()
 		return readfile(file)
@@ -377,7 +376,7 @@ local function downloadFile(path, func)
 	if not isfile(path) then
 		createDownloader(path)
 		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/nyxv4/nyx/main/'..select(1, path:gsub('mxtionv4/', '')), true)
+			return game:HttpGet('https://raw.githubusercontent.com/GlockSwitchMotion/mxtionV4/'..readfile('mxtionv4/profiles/commit.txt')..'/'..select(1, path:gsub('mxtionv4/', '')), true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
@@ -2610,10 +2609,25 @@ function mainapi:CreateGUI()
 	addBlur(window)
 	addCorner(window)
 	makeDraggable(window)
-local logo = Instance.new('ImageLabel')
-logo.Name = 'VapeLogo'
-logo.Visible = false
-logo.Parent = window
+	local logo = Instance.new('ImageLabel')
+	logo.Name = 'VapeLogo'
+	logo.Size = UDim2.fromOffset(155, 40)
+	logo.Position = UDim2.fromOffset(-16, 2)
+	logo.BackgroundTransparency = 1
+	logo.Image = getcustomasset('mxtionv4/assets/new/guivape.png')
+	logo.ImageColor3 = select(3, uipallet.Main:ToHSV()) > 0.5 and uipallet.Text or Color3.new(1, 1, 1)
+	logo.ScaleType = Enum.ScaleType.Fit
+	logo.Parent = window
+	local logov4 = Instance.new('ImageLabel')
+	logov4.Name = 'V4Logo'
+	logov4.Size = UDim2.fromOffset(32, 18)
+	logov4.Position = UDim2.new(0, 124, 0, 11)
+	logov4.BackgroundTransparency = 1
+	logov4.Image = getcustomasset('mxtionv4/assets/new/guiv4.png')
+	logov4.ImageRectOffset = Vector2.new(147, 29)
+	logov4.ImageRectSize = Vector2.new(39, 23)
+	logov4.ScaleType = Enum.ScaleType.Fit
+	logov4.Parent = logo
 	local children = Instance.new('Frame')
 	children.Name = 'Children'
 	children.Size = UDim2.new(1, 0, 1, -33)
@@ -4031,58 +4045,30 @@ function mainapi:CreateCategory(categorysettings)
 			end
 		end
 
-function moduleapi:Toggle(multiple)
-    if mainapi.ThreadFix then
-        setthreadidentity(8)
-    end
-
-    self.Enabled = not self.Enabled
-    divider.Visible = self.Enabled
-    gradient.Enabled = self.Enabled
-
-    modulebutton.TextColor3 = (hovered or modulechildren.Visible)
-        and uipallet.Text
-        or color.Dark(uipallet.Text, 0.16)
-
-    modulebutton.BackgroundColor3 = (hovered or modulechildren.Visible)
-        and color.Light(uipallet.Main, 0.02)
-        or uipallet.Main
-
-    dots.ImageColor3 = self.Enabled
-        and Color3.fromRGB(50, 50, 50)
-        or color.Light(uipallet.Main, 0.37)
-
-    bindicon.ImageColor3 = color.Dark(uipallet.Text, 0.43)
-    bindtext.TextColor3 = color.Dark(uipallet.Text, 0.43)
-
-    if not self.Enabled then
-        for _, v in self.Connections do
-            v:Disconnect()
-        end
-        table.clear(self.Connections)
-    end
-
-    if not multiple then
-        mainapi:UpdateTextGUI()
-    end
-
-    mainapi:QueueSave()
-
-    task.spawn(function()
-        local success, err = pcall(function()
-            modulesettings.Function(self.Enabled)
-        end)
-
-        if not success then
-            mainapi:CreateNotification(
-                'NYX',
-                modulesettings.Name..' error: '..tostring(err),
-                10,
-                'alert'
-            )
-        end
-    end)
-end
+		function moduleapi:Toggle(multiple)
+			if mainapi.ThreadFix then
+				setthreadidentity(8)
+			end
+			self.Enabled = not self.Enabled
+			divider.Visible = self.Enabled
+			gradient.Enabled = self.Enabled
+			modulebutton.TextColor3 = (hovered or modulechildren.Visible) and uipallet.Text or color.Dark(uipallet.Text, 0.16)
+			modulebutton.BackgroundColor3 = (hovered or modulechildren.Visible) and color.Light(uipallet.Main, 0.02) or uipallet.Main
+			dots.ImageColor3 = self.Enabled and Color3.fromRGB(50, 50, 50) or color.Light(uipallet.Main, 0.37)
+			bindicon.ImageColor3 = color.Dark(uipallet.Text, 0.43)
+			bindtext.TextColor3 = color.Dark(uipallet.Text, 0.43)
+			if not self.Enabled then
+				for _, v in self.Connections do
+					v:Disconnect()
+				end
+				table.clear(self.Connections)
+			end
+			if not multiple then
+				mainapi:UpdateTextGUI()
+			end
+			mainapi:QueueSave()
+			task.spawn(modulesettings.Function, self.Enabled)
+		end
 
 		for i, v in components do
 			moduleapi['Create'..i] = function(_, optionsettings)
@@ -5723,7 +5709,7 @@ local function installPresets()
 	end
 
 	local suc, req = pcall(request, {
-		Url = 'https://api.github.com/repos/nyxv4/nyx/contents/profiles',
+		Url = 'https://api.github.com/repos/GlockSwitchMotion/mxtionV4/contents/profiles',
 		Method = 'GET'
 	})
 	if not suc or not req or req.StatusCode ~= 200 then return false end
@@ -5739,7 +5725,7 @@ local function installPresets()
 		if v.type == 'file' then
 			local path = ({v.path:gsub(' ', '%%20')})[1]
 			local got, res = pcall(function()
-				return game:HttpGet(`https://raw.githubusercontent.com/nyxv4/nyx/mxtionV4/{commit}/{path}`, true)
+				return game:HttpGet(`https://raw.githubusercontent.com/GlockSwitchMotion/mxtionV4/{commit}/{path}`, true)
 			end)
 			if got and type(res) == 'string' and res ~= '' and res ~= '404: Not Found' then
 				writefile(`mxtionv4/{path}`, res)
@@ -6593,7 +6579,7 @@ local scarcitybanner = Instance.new('TextLabel')
 scarcitybanner.Size = UDim2.fromScale(1, 0.02)
 scarcitybanner.Position = UDim2.fromScale(0, 0.97)
 scarcitybanner.BackgroundTransparency = 1
-scarcitybanner.Text = 'Join the nyxv4 dicord server.'
+scarcitybanner.Text = 'Join the Motionv4 dicord server.'
 scarcitybanner.TextScaled = true
 scarcitybanner.TextColor3 = Color3.new(1, 1, 1)
 scarcitybanner.TextStrokeTransparency = 0.5
@@ -6843,7 +6829,7 @@ Profiles:CreateButton({
 		if shared.VapeDeveloper then
 			loadstring(readfile('mxtionv4/init.lua'), 'init')(license)
 		else
-			loadstring(game:HttpGet('https://raw.githubusercontent.com/nyxv4/nyx/mxtionV4/'..readfile('mxtionv4/profiles/commit.txt')..'/init.lua', true))(license)
+			loadstring(game:HttpGet('https://raw.githubusercontent.com/GlockSwitchMotion/mxtionV4/'..readfile('mxtionv4/profiles/commit.txt')..'/init.lua', true))(license)
 		end
 	end,
 	Tooltip = 'This will set your profile to the default settings of Motion v4'
@@ -7261,7 +7247,7 @@ general:CreateButton({
 			if shared.VapeDeveloper then
 				loadstring(readfile('mxtionv4/init.lua'), 'init')()
 			else
-				loadstring(game:HttpGet('https://raw.githubusercontent.com/nyxv4/nyx/mxtionV4/'..readfile('mxtionv4/profiles/commit.txt')..'/init.lua', true))()
+				loadstring(game:HttpGet('https://raw.githubusercontent.com/GlockSwitchMotion/mxtionV4/'..readfile('mxtionv4/profiles/commit.txt')..'/init.lua', true))()
 			end
 		end)
 	end,
@@ -7393,7 +7379,7 @@ guipane:CreateDropdown({
 			if shared.VapeDeveloper then
 				loadstring(readfile('mxtionv4/init.lua'), 'loader')()
 			else
-				loadstring(game:HttpGet('https://raw.githubusercontent.com/nyxv4/nyx/mxtionV4/'..readfile('mxtionv4/profiles/commit.txt')..'/init.lua', true))()
+				loadstring(game:HttpGet('https://raw.githubusercontent.com/GlockSwitchMotion/mxtionV4/'..readfile('mxtionv4/profiles/commit.txt')..'/init.lua', true))()
 			end
 		end
 	end,
@@ -7713,7 +7699,7 @@ VapeLogo.BackgroundTransparency = 1
 VapeLogo.BorderSizePixel = 0
 VapeLogo.Visible = false
 VapeLogo.BackgroundColor3 = Color3.new()
-VapeLogo.Image = getcustomasset('mxtionv4/assets/new/guivape.png')
+VapeLogo.Image = getcustomasset('mxtionv4/assets/new/textvape.png')
 VapeLogo.Parent = textgui.Children
 
 local lastside = textgui.Children.AbsolutePosition.X > (gui.AbsoluteSize.X / 2)
@@ -8392,7 +8378,7 @@ function mainapi:UpdateGUI(hue, sat, val, default)
 
 	for i, v in mainapi.Categories do
 		if i == 'Main' then
-			v.Object.VapeLogo.ImageColor3 = Color3.fromHSV(hue, sat, val)
+			v.Object.VapeLogo.V4Logo.ImageColor3 = Color3.fromHSV(hue, sat, val)
 			for _, button in v.Buttons do
 				if button.Enabled then
 					button.Object.TextColor3 = rainbow and Color3.fromHSV(mainapi:Color((hue - (button.Index * 0.025)) % 1)) or Color3.fromHSV(hue, sat, val)
