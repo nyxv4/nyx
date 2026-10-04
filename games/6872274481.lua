@@ -1,6 +1,3 @@
---This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
--- bedwars ingame 
-
 local run = function(func)
 	local ok, err = pcall(func)
 	if not ok then
@@ -3017,32 +3014,123 @@ run(function()
         return inputService.GetMouseLocation(inputService)
     end
     
-    local function getAim(ent)
-        if AimPart.Value == 'Closest' then
-            if not cache[ent.Character] then
-                cache[ent.Character] = ent.Character:GetChildren()
+    -- Velocity tracking for prediction
+    local velocityHistory = setmetatable({}, { __mode = 'k' })
+    local function getTargetVelocity(ent)
+        if not ent or not ent.RootPart then return Vector3.zero end
+        local vel = ent.RootPart.AssemblyLinearVelocity or ent.RootPart.Velocity or Vector3.zero
+        local key = tostring(ent)
+        if not velocityHistory[key] then
+            velocityHistory[key] = vel
+        else
+            velocityHistory[key] = velocityHistory[key]:Lerp(vel, 0.3)
+        end
+        return velocityHistory[key]
+    end
+    
+    -- Enhanced projectile detection - checks if item has projectileSource in metadata
+    local function isProjectileItem()
+        if not store.hand or not store.hand.tool then return false end
+        local toolType = store.hand.toolType
+        if toolType == 'bow' then return true end
+        
+        -- Check item metadata for projectileSource
+        local toolName = store.hand.tool.Name
+        local meta = bedwars.ItemMeta and bedwars.ItemMeta[toolName]
+        if meta and meta.projectileSource then
+            -- Exclude trident as requested
+            local lowerName = toolName:lower()
+            if lowerName:find('trident') then
+                return false
             end
-            local localPosition, magnitude, part = getMousePosition(), 9e9, nil
-            for _, v in cache[ent.Character] do
-                if v and v.Parent and v:IsA('BasePart') then
-                    local position, vis = gameCamera.WorldToViewportPoint(gameCamera, v.Position)
-    
-                    if vis then
-                        local mag = (localPosition - Vector2.new(position.x, position.y)).Magnitude
-    
-                        if mag < magnitude then
-                            magnitude = mag
-                            part = v
+            return true
+        end
+        
+        -- Fallback to name patterns for items that might not have meta loaded
+        local name = toolName:lower()
+        local projectilePatterns = {
+            'bow', 'crossbow', 'headhunter', 'ballista', 'egg',
+            'snowball', 'gun', 'blaster', 'dart', 'launcher',
+            'fireball', 'firework', 'grenade', 'balloon', 'rock',
+            'telepearl', 'lasso', 'potion', 'splash', 'jellyfish',
+            'fish', 'spear', 'throwing', 'tnt', 'chicken'
+        }
+        for _, pattern in projectilePatterns do
+            if name:find(pattern) then
+                -- Still exclude trident
+                if not name:find('trident') then
+                    return true
+                end
+            end
+        end
+        return false
+    end
+
+    local function getAim(ent)
+        local targetPos
+        local holdingProjectile = ProjectileSupport and ProjectileSupport.Enabled and isProjectileItem()
+        
+        if holdingProjectile then
+            -- Use projectile prediction for better aiming
+            local tool = store.hand and store.hand.tool
+            local toolName = tool and tool.Name
+            local meta = toolName and bedwars.ItemMeta and bedwars.ItemMeta[toolName]
+            
+            if meta and meta.projectileSource then
+                local projSource = meta.projectileSource
+                local projType = type(projSource.projectileType) == 'function' and projSource.projectileType() or 'arrow'
+                local projMeta = bedwars.ProjectileMeta and bedwars.ProjectileMeta[projType]
+                
+                if projMeta then
+                    local projSpeed = tonumber(projMeta.launchVelocity) or 100
+                    local gravity = tonumber(projMeta.gravitationalAcceleration) or 196.2
+                    if gravity < 1 then gravity = 0 end
+                    
+                    local selfPos = entitylib.character and entitylib.character.RootPart.Position
+                    local targetPart = ent.RootPart
+                    local velocity = getTargetVelocity(ent)
+                    
+                    -- Simple prediction: aim ahead based on velocity and estimated travel time
+                    local distance = (targetPart.Position - selfPos).Magnitude
+                    local travelTime = distance / projSpeed
+                    local predictedPos = targetPart.Position + (velocity * travelTime)
+                    
+                    targetPos = predictedPos
+                end
+            end
+        end
+        
+        if not targetPos then
+            if AimPart.Value == 'Closest' then
+                if not cache[ent.Character] then
+                    cache[ent.Character] = ent.Character:GetChildren()
+                end
+                local localPosition, magnitude, part = getMousePosition(), 9e9, nil
+                for _, v in cache[ent.Character] do
+                    if v and v.Parent and v:IsA('BasePart') then
+                        local position, vis = gameCamera.WorldToViewportPoint(gameCamera, v.Position)
+        
+                        if vis then
+                            local mag = (localPosition - Vector2.new(position.x, position.y)).Magnitude
+        
+                            if mag < magnitude then
+                                magnitude = mag
+                                part = v
+                            end
                         end
                     end
                 end
+                if part then
+                    targetPos = part.Position
+                end
             end
-            if part then
-                return part.Position
+            -- Default/Center mode: Aims explicitly at the RootPart
+            if not targetPos then
+                targetPos = ent.RootPart and ent.RootPart.Position or ent.Character.HumanoidRootPart.Position
             end
         end
-        -- Default/Center mode: Aims explicitly at the RootPart
-        return ent.RootPart and ent.RootPart.Position or ent.Character.HumanoidRootPart.Position
+        
+        return targetPos
     end
     
     local started, lasttarget, nextsearch = 0, nil, 0
@@ -3081,21 +3169,6 @@ run(function()
         return true
     end
     
-    local projectileItemPatterns = {
-        'bow', 'crossbow', 'headhunter', 'trident', 'ballista', 'egg',
-        'snowball', 'gun', 'blaster', 'dart', 'launcher'
-    }
-    local function isProjectileItem()
-        if not store.hand or not store.hand.tool then return false end
-        local toolType = store.hand.toolType
-        if toolType == 'bow' then return true end
-        local name = store.hand.tool.Name:lower()
-        for _, pattern in projectileItemPatterns do
-            if name:find(pattern) then return true end
-        end
-        return false
-    end
-
     local function getAttackData()
         local lastSwing = bedwars.SwordController and bedwars.SwordController.lastSwing
         if ClickAim.Enabled and lastSwing and (tick() - lastSwing) > 0.3 then
@@ -3190,7 +3263,7 @@ run(function()
                 end
             end
         end,
-        Tooltip = 'Smoothly aims to closest valid target with sword'
+        Tooltip = 'Smoothly aims to closest valid target with sword and projectiles'
     })
     local modes = {}
     for i in aimfuncs do
@@ -3284,12 +3357,12 @@ run(function()
     })
     Limit = AimAssist:CreateToggle({
         Name = 'Limit to items',
-        Tooltip = 'Only attacks when sword is held',
+        Tooltip = 'Only attacks when sword or projectile is held',
     })
     ProjectileSupport = AimAssist:CreateToggle({
         Name = 'Projectile support',
         Default = false,
-        Tooltip = 'Allow aim assist while holding projectile weapons (bows, crossbows, headhunters, tridents, etc.)\nRequires \'Limit to items\' to be enabled',
+        Tooltip = 'Allow aim assist while holding projectile weapons (bows, crossbows, headhunters, fireballs, gloops, etc.)\nRequires \'Limit to items\' to be enabled\nExcludes trident',
     })
     Sort = AimAssist:CreateDropdown({
         Name = 'Target mode',
@@ -7382,17 +7455,20 @@ run(function()
 	local AttackRemote
 	local lastAttackTime = 0
 	local lastTargetTime = 0
+	local lastAnimTime = 0 -- Track when last animation was played to prevent doubling
 	local anims, AnimDelay, AnimTween, armC0 = vape.Libraries.auraanims, tick()
 	local FROZEN_THRESHOLD = 10
-	local HIT_PERIOD = 0.2974
+	local HIT_PERIOD = 0.2974 -- Killaura hit period
 	local SERVER_FLOOR = 0.298
 	local SERVER_REACH = 14.399
 	local kaPeriod = HIT_PERIOD
+	local animPeriod = 0.3 -- Fixed animation period to match normal sword speed
 	local kaNextFire = 0
 	local kaSync = 0
 	local kaSyncSrv = 0
 	local kaLastSrv = 0
 	local kaLastSend = 0
+	local lastProjectileTime = 0 -- Track when last projectile was fired
 	local glueRemote = {InvokeServer = function() end}
 	local projectileRemote = {InvokeServer = function() end}
 	local gloopTracker = {}
@@ -8241,6 +8317,8 @@ run(function()
 				if sound and bedwars.SoundManager then
 					pcall(function() bedwars.SoundManager:playSound(sound) end)
 				end
+				-- Track projectile fire time to prevent ghosting sword hits
+				lastProjectileTime = workspace:GetServerTimeNow()
 			else
 				ProjectileDelay[item.itemType] = tick() + (itemMeta.fireDelaySec or 0.5) + 0.1
 			end
@@ -8361,6 +8439,8 @@ run(function()
 				{shotId = httpService:GenerateGUID(true):sub(1, 8):upper(), drawDurationSec = 0.05},
 				workspace:GetServerTimeNow()
 			)
+			-- Track projectile fire time to prevent ghosting sword hits
+			lastProjectileTime = workspace:GetServerTimeNow()
 		end)
 
 		gloopTracker[key] = {target = ent, lastShot = now}
@@ -8370,7 +8450,8 @@ run(function()
 	end
 
 	local function shootFireball(item, ent)
-		if not ent or not ent.RootPart then return false end
+		-- Strict check: throw Fireballs ONLY on real players (not NPCs)
+		if not ent or not ent.RootPart or not ent.Player then return false end
 		local key = tostring(ent)
 		local now = tick()
 		local tracked = fireballTracker[key]
@@ -8430,6 +8511,8 @@ run(function()
 				{shotId = httpService:GenerateGUID(true):sub(1, 8):upper(), drawDurationSec = 0.05},
 				workspace:GetServerTimeNow()
 			)
+			-- Track projectile fire time to prevent ghosting sword hits
+			lastProjectileTime = workspace:GetServerTimeNow()
 		end)
 
 		fireballTracker[key] = {target = ent, lastShot = now}
@@ -8566,7 +8649,7 @@ run(function()
 		autoShootLoop = task.spawn(function()
 			while Killaura and Killaura.Enabled and FastHits and FastHits.Enabled do
 				pcall(doFastHits)
-				task.wait(0.075)
+				task.wait(0.035)
 			end
 			fhBusy = false
 			autoShootLoop = nil
@@ -8659,6 +8742,12 @@ run(function()
 
 	local function attemptFire()
 		if fhBusy and (workspace:GetServerTimeNow() - (store._fhBusySince or 0)) < 0.15 then return false end
+		
+		-- Add small delay after FastHits to prevent ghosting sword hits
+		if lastProjectileTime > 0 and (workspace:GetServerTimeNow() - lastProjectileTime) < 0.1 then
+			return false
+		end
+		
 		local v = resolveTarget()
 		if not v then return false end
 
@@ -8737,6 +8826,7 @@ run(function()
 		if killauraFireLoop then return end
 
 		kaPeriod = HIT_PERIOD
+		animPeriod = 0.3 -- Initialize animation period to normal sword speed
 		kaNextFire = 0
 		kaLastSrv = 0
 		kaLastSend = 0
@@ -8756,9 +8846,13 @@ run(function()
 				local sword, meta = getAttackData()
 				if sword and meta then
 					local dynamicSpd = getWeaponAttackSpeed(sword, meta)
-					kaPeriod = (type(dynamicSpd) == 'number' and dynamicSpd >= 0.1) and (dynamicSpd * 0.976) or HIT_PERIOD
+					-- Attack period uses 0.976 multiplier for faster attacks
+					kaPeriod = (type(dynamicSpd) == 'number' and dynamicSpd >= 0.11) and (dynamicSpd * 0.976) or HIT_PERIOD
+					-- Animation period stays at the actual weapon speed (not affected by multiplier)
+					animPeriod = (type(dynamicSpd) == 'number' and dynamicSpd >= 0.11) and dynamicSpd or 0.400
 				else
 					kaPeriod = HIT_PERIOD
+					animPeriod = 0.400
 				end
 
 				local target = kaPeriod - math.min(frameDelta * 0.5, kaPeriod * 0.06)
@@ -8781,6 +8875,7 @@ run(function()
 		kaNextFire = 0
 		kaSync = 0
 		kaSyncSrv = 0
+		animPeriod = HIT_PERIOD -- Reset animation period
 	end
 
 	Killaura = vape.Categories.Blatant:CreateModule({
@@ -8833,7 +8928,7 @@ run(function()
 							elseif started then
 								started = false
 								if AnimTween then AnimTween:Destroy() AnimTween = nil end
-								AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(AnimationTween.Enabled and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
+								AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(AnimationTween and AnimationTween.Enabled and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
 									C0 = armC0
 								})
 								AnimTween:Play()
@@ -8983,14 +9078,16 @@ run(function()
 								end
 							end
 
-							if not isClaw and AnimDelay <= tick() then
+							if not isClaw and (tick() - lastAnimTime) >= animPeriod then
 								local allowSwingAnim = not (Swing and Swing.Enabled)
 									and not (LegitAura and LegitAura.Enabled)
 									and not (Animation and Animation.Enabled)
 								if allowSwingAnim then
+									-- Fixed animation period to prevent stuttering/doubling
 									local swingSpeed = (SwingTime and SwingTime.Enabled)
 										and math.max(SwingTimeSlider.Value, 0.11)
-										or kaPeriod
+										or animPeriod
+									lastAnimTime = tick()
 									AnimDelay = tick() + swingSpeed
 									if isOnTinker() then
 										playTinkerSwing()
@@ -9332,6 +9429,171 @@ run(function()
 			if FireballCooldown then FireballCooldown.Object.Visible = (Fireballs and Fireballs.Enabled) end
 		end
 	end)
+end)
+
+run(function()
+    local InfiniteFly
+    local FlySpeed
+    local FlyHotkey
+    
+    local flying = false
+    local lastPosition = Vector3.new(0, 0, 0)
+    local flyConnection
+    local targetPosition = Vector3.new(0, 0, 0)
+    
+    -- Key mapping for hotkey
+    local keyMap = {
+        ['F'] = Enum.KeyCode.F,
+        ['G'] = Enum.KeyCode.G,
+        ['H'] = Enum.KeyCode.H,
+        ['Left Shift'] = Enum.KeyCode.LeftShift,
+        ['Right Shift'] = Enum.KeyCode.RightShift
+    }
+    
+    InfiniteFly = vape.Categories.Blatant:CreateModule({
+        Name = 'InfiniteFly',
+        Function = function(callback)
+            if callback then
+                flying = true
+                if not entitylib.isAlive then return end
+                
+                local character = entitylib.character.Character
+                local humanoid = character:FindFirstChildOfClass('Humanoid')
+                local rootPart = character:FindFirstChild("HumanoidRootPart")
+                
+                if not humanoid or not rootPart then return end
+                
+                -- Save original walkspeed and disable it
+                local originalWalkSpeed = humanoid.WalkSpeed
+                local originalJumpPower = humanoid.JumpPower
+                humanoid.WalkSpeed = 0
+                humanoid.JumpPower = 0
+                
+                -- Store initial position
+                lastPosition = rootPart.Position
+                targetPosition = lastPosition
+                
+                flyConnection = runService.PostSimulation:Connect(function(dt)
+                    if not entitylib.isAlive or not InfiniteFly.Enabled then
+                        flying = false
+                        return
+                    end
+                    
+                    if not flying then return end
+                    
+                    local speed = FlySpeed.Value
+                    local moveVector = Vector3.new(0, 0, 0)
+                    
+                    -- Movement controls (WASD)
+                    if inputService:IsKeyDown(Enum.KeyCode.W) then
+                        local camCF = gameCamera.CFrame
+                        moveVector = moveVector + (camCF.LookVector * Vector3.new(1, 0, 1)).Unit * speed * dt
+                    end
+                    if inputService:IsKeyDown(Enum.KeyCode.S) then
+                        local camCF = gameCamera.CFrame
+                        moveVector = moveVector - (camCF.LookVector * Vector3.new(1, 0, 1)).Unit * speed * dt
+                    end
+                    if inputService:IsKeyDown(Enum.KeyCode.A) then
+                        local camCF = gameCamera.CFrame
+                        moveVector = moveVector - (camCF.RightVector * Vector3.new(1, 0, 1)).Unit * speed * dt
+                    end
+                    if inputService:IsKeyDown(Enum.KeyCode.D) then
+                        local camCF = gameCamera.CFrame
+                        moveVector = moveVector + (camCF.RightVector * Vector3.new(1, 0, 1)).Unit * speed * dt
+                    end
+                    
+                    -- Up/Down controls (Space/Shift)
+                    if inputService:IsKeyDown(Enum.KeyCode.Space) then
+                        moveVector = moveVector + Vector3.new(0, speed * dt, 0)
+                    end
+                    if inputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                        moveVector = moveVector - Vector3.new(0, speed * dt, 0)
+                    end
+                    
+                    -- Update target position
+                    targetPosition = targetPosition + moveVector
+                    
+                    -- Smoothly move to target (less detectable than instant teleport)
+                    local currentPos = rootPart.Position
+                    local newPos = currentPos:Lerp(targetPosition, 0.1)
+                    
+                    -- Use CFrame instead of velocity manipulation (more subtle)
+                    rootPart.CFrame = CFrame.new(newPos, newPos + gameCamera.CFrame.LookVector * Vector3.new(1, 0, 1))
+                    
+                    -- Keep AssemblyLinearVelocity within normal bounds to avoid detection
+                    local currentVel = rootPart.AssemblyLinearVelocity
+                    local maxVel = speed * 1.5 -- Allow slight overshoot but keep reasonable
+                    if currentVel.Magnitude > maxVel then
+                        rootPart.AssemblyLinearVelocity = currentVel.Unit * maxVel
+                    end
+                end)
+                
+                InfiniteFly:Clean(flyConnection)
+                
+                -- Hotkey to toggle
+                InfiniteFly:Clean(inputService.InputBegan:Connect(function(input, gameProcessed)
+                    if gameProcessed then return end
+                    local hotkeyCode = keyMap[FlyHotkey.Value] or Enum.KeyCode.F
+                    if input.KeyCode == hotkeyCode then
+                        flying = not flying
+                        if flying then
+                            targetPosition = rootPart.Position
+                        end
+                    end
+                end))
+                
+            else
+                flying = false
+                if flyConnection then
+                    flyConnection:Disconnect()
+                    flyConnection = nil
+                end
+                -- Restore original movement settings
+                if entitylib.isAlive then
+                    local character = entitylib.character.Character
+                    local humanoid = character and character:FindFirstChildOfClass('Humanoid')
+                    if humanoid then
+                        humanoid.WalkSpeed = 16
+                        humanoid.JumpPower = 50
+                    end
+                end
+            end
+        end,
+        Tooltip = 'Undetected fly using CFrame manipulation instead of velocity'
+    })
+    
+    FlySpeed = InfiniteFly:CreateSlider({
+        Name = 'Fly speed',
+        Min = 1,
+        Max = 50,
+        Default = 15,
+        Suffix = function(val)
+            return val == 1 and 'stud/s' or 'studs/s'
+        end
+    })
+    
+    FlyHotkey = InfiniteFly:CreateDropdown({
+        Name = 'Toggle hotkey',
+        List = {'F', 'G', 'H', 'Left Shift', 'Right Shift'},
+        Default = 'F'
+    })
+    
+    -- Cleanup function
+    InfiniteFly:Clean(function()
+        flying = false
+        if flyConnection then
+            flyConnection:Disconnect()
+            flyConnection = nil
+        end
+        if entitylib.isAlive then
+            local character = entitylib.character.Character
+            local humanoid = character and character:FindFirstChildOfClass('Humanoid')
+            if humanoid then
+                humanoid.WalkSpeed = 16
+                humanoid.JumpPower = 50
+            end
+        end
+    end)
 end)
 
 run(function()
@@ -10661,6 +10923,151 @@ run(function()
 			end
 		end,
 		Darker = true
+	})
+end)
+
+run(function()
+	local AutoConqueror
+	local Targets
+	local BannerMode
+	local TriggerMode
+	local CooldownSlider
+	local RangeSlider
+	local lastPlaced = 0
+
+	-- All Conqueror Banner Types
+	local bannerTypes = {
+		['Defense Banner'] = 'conqueror_banner_defense',
+		['Speed Banner'] = 'conqueror_banner_speed',
+		['Heal Banner'] = 'conqueror_banner_heal'
+	}
+
+	local function getBannerItem(itemType)
+		for _, item in ipairs(store.inventory.inventory.items) do
+			if item.itemType == itemType then
+				return item
+			end
+		end
+		return nil
+	end
+
+	local function findBannerSlot(itemType)
+		for slot, entry in pairs(store.inventory.hotbar or {}) do
+			local item = entry and entry.item
+			local tool = item and item.tool
+			if (item and item.itemType == itemType) or (tool and tool.Name == itemType) then
+				return slot - 1
+			end
+		end
+		return nil
+	end
+
+	local function placeBanner()
+		if tick() - lastPlaced < CooldownSlider.Value then return end
+
+		local selectedBannerName = BannerMode.Value
+		local targetItemType = bannerTypes[selectedBannerName] or 'conqueror_banner_defense'
+		local bannerItem = getBannerItem(targetItemType)
+		if not bannerItem or not bannerItem.tool then return end
+
+		local myRoot = entitylib.character and entitylib.character.RootPart
+		if not myRoot then return end
+
+		local placePos = myRoot.Position + (myRoot.CFrame.LookVector * 2) - Vector3.new(0, 1.5, 0)
+
+		lastPlaced = tick()
+
+		pcall(function()
+			-- Equip banner slot if in hotbar
+			local slot = findBannerSlot(targetItemType)
+			if slot then
+				bedwars.Store:dispatch({type = 'InventorySelectHotbarSlot', slot = slot})
+			end
+
+			-- Use / Place Banner
+			local remotes = getgenv().remotes or remotes
+			if remotes and remotes.UseItem then
+				bedwars.Client:Get(remotes.UseItem).instance:InvokeServer({
+					item = bannerItem.tool,
+					position = placePos
+				})
+			elseif bedwars.BannerController and bedwars.BannerController.placeBanner then
+				bedwars.BannerController:placeBanner(targetItemType, placePos)
+			end
+		end)
+	end
+
+	local function checkEnemiesInRange()
+		if not entitylib.isAlive then return false end
+
+		local walls = Targets.Walls and Targets.Walls.Enabled or nil
+		local players = Targets.Players and Targets.Players.Enabled
+		local npcs = Targets.NPCs and Targets.NPCs.Enabled
+
+		local list = entitylib.AllPosition({
+			Range = RangeSlider.Value,
+			Wallcheck = walls,
+			Part = 'RootPart',
+			Players = players,
+			NPCs = npcs,
+			Limit = 1
+		})
+
+		return #list > 0
+	end
+
+	AutoConqueror = vape.Categories.Utility:CreateModule({
+		Name = 'AutoConqueror',
+		Function = function(callback)
+			if callback then
+				task.spawn(function()
+					while AutoConqueror.Enabled do
+						if TriggerMode.Value == 'Close to enemy' then
+							if checkEnemiesInRange() then
+								placeBanner()
+							end
+						elseif TriggerMode.Value == 'On enemy hit' then
+							if store.KillauraTarget and (tick() - (store.attackReachUpdate or 0)) < 0.3 then
+								placeBanner()
+							end
+						end
+						task.wait(0.1)
+					end
+				end)
+			end
+		end,
+		Tooltip = 'Automatically places down chosen Conqueror banner beside you in combat'
+	})
+
+	Targets = AutoConqueror:CreateTargets({
+		Players = true,
+		NPCs = true
+	})
+
+	BannerMode = AutoConqueror:CreateDropdown({
+		Name = 'Banner Mode',
+		List = {'Defense Banner', 'Speed Banner', 'Heal Banner'}
+	})
+
+	TriggerMode = AutoConqueror:CreateDropdown({
+		Name = 'Trigger Mode',
+		List = {'Close to enemy', 'On enemy hit'}
+	})
+
+	CooldownSlider = AutoConqueror:CreateSlider({
+		Name = 'Cooldown',
+		Min = 0,
+		Max = 30,
+		Default = 10,
+		Suffix = 's'
+	})
+
+	RangeSlider = AutoConqueror:CreateSlider({
+		Name = 'Enemy Range',
+		Min = 1,
+		Max = 30,
+		Default = 15,
+		Suffix = function(val) return val == 1 and 'stud' or 'studs' end
 	})
 end)
 
@@ -14539,7 +14946,7 @@ run(function()
 							if not dropTime then continue end
 							if (currentTime - dropTime) < 2 then continue end
 							if isnetworkowner(v) and humanoidHealth > 0 then
-								v.CFrame = CFrame.new(localPosition - Vector3.new(0, 3, 0))
+								v.CFrame = CFrame.new(localPosition - Vector3.new(0, 8, 0))
 							end
 						end
 					end
@@ -16480,7 +16887,7 @@ run(function()
 		Name = 'Drop Gold',
 		Default = true
 	})
-end)
+end) 
 	
 run(function()
 	local PickupRange
@@ -21629,10 +22036,11 @@ run(function()
 		end
 	end
 
-	-- SAFE FREEZE: Zero out velocities without setting Anchored = true (prevents player physics lock)
+	-- FIXED: Only freeze the item drop itself, never touching character parts
 	local function freezeParts(obj)
+		local char = lplr.Character
 		local function applyProperties(part)
-			if part:IsA('BasePart') then
+			if part:IsA('BasePart') and (not char or not part:IsDescendantOf(char)) then
 				part.Velocity = Vector3.zero
 				part.RotVelocity = Vector3.zero
 				part.CanCollide = false
@@ -21641,24 +22049,31 @@ run(function()
 			end
 		end
 
-		if obj:IsA('BasePart') then applyProperties(obj) end
-		for _, part in ipairs(obj:GetDescendants()) do
-			applyProperties(part)
+		if obj:IsA('BasePart') then 
+			applyProperties(obj) 
+		elseif obj:IsA('Model') then
+			for _, part in ipairs(obj:GetDescendants()) do
+				applyProperties(part)
+			end
 		end
 	end
 
 	local function unfreezeParts(obj)
+		local char = lplr.Character
 		local function restoreProperties(part)
-			if part:IsA('BasePart') then
+			if part:IsA('BasePart') and (not char or not part:IsDescendantOf(char)) then
 				part.Velocity = Vector3.zero
 				part.RotVelocity = Vector3.zero
 				part.CanCollide = false
 			end
 		end
 
-		if obj:IsA('BasePart') then restoreProperties(obj) end
-		for _, part in ipairs(obj:GetDescendants()) do
-			restoreProperties(part)
+		if obj:IsA('BasePart') then 
+			restoreProperties(obj) 
+		elseif obj:IsA('Model') then
+			for _, part in ipairs(obj:GetDescendants()) do
+				restoreProperties(part)
+			end
 		end
 	end
 
@@ -21735,7 +22150,7 @@ run(function()
 				task.spawn(function()
 					pcall(function()
 						item:SetAttribute('ClientDropTime', 0)
-						moveItem(item, entitylib.character.Head.CFrame + Vector3.new(0, -8, 0))
+						moveItem(item, entitylib.character.RootPart.CFrame + Vector3.new(0, -10, 0))
 						unfreezeParts(item)
 
 						for attempt = 1, 30 do
@@ -21841,7 +22256,7 @@ run(function()
 							end
 						end
 					end
-					task.wait()
+					task.wait(0.1)
 				until not AutoBank.Enabled
 			else
 				-- ON TOGGLE OFF: Recall and unfreeze all stored items immediately
@@ -23870,179 +24285,167 @@ run(function()
 	})
 end)
 
-TargetMode = Breaker:CreateDropdown({
-		Name = 'Target Mode',
-		List = {'Distance', 'Health'},
-		Default = 'Distance',
-		Tooltip = 'distance picks the closest block, health picks the weakest one'
-	})
-	Mode = Breaker:CreateDropdown({
-		Name = 'Mode',
-		List = {'Normal', 'Legit'},
-		Default = 'Normal',
-		Tooltip = 'normal digs to the block on its own, legit only breaks what ur cursor is on',
-		Function = function(val)
-			if TargetMode and TargetMode.Object then
-				TargetMode.Object.Visible = val ~= 'Legit'
-			end
-			clearLegit()
-		end
-	})
-	Range = Breaker:CreateSlider({
-		Name = 'Break range',
-		Min = 1,
-		Max = 30,
-		Default = 30,
-		Tooltip = 'how far away a block can be for u to hit it'
-	})
-	BreakerAngle = Breaker:CreateSlider({
-		Name = 'Break Angle',
-		Min = 0,
-		Max = 360,
-		Default = 360,
-		Tooltip = 'only digs thru blocks inside this cone in front of ur cam'
-	})
-	BreakSpeed = Breaker:CreateSlider({
-		Name = 'Break speed',
-		Min = 0,
-		Max = 0.3,
-		Default = 0.25,
-		Decimal = 100,
-		Tooltip = 'wait between each hit, lower is faster'
-	})
-	UpdateRate = Breaker:CreateSlider({
-		Name = 'Update rate',
-		Min = 1,
-		Max = 120,
-		Default = 60,
-		Tooltip = 'how often it re checks for blocks, leave it high'
-	})
-	Bed = Breaker:CreateToggle({
-		Name = 'Break Bed',
-		Default = true,
-		Function = function(callback)
-			if BedCheck and BedCheck.Object then
-				BedCheck.Object.Visible = callback
-			end
-		end
-	})
-	BedCheck = Breaker:CreateToggle({
-		Name = 'Bed Check',
-		Default = false,
-		Darker = true,
-		Tooltip = 'slows down to normal speed once ur actually on the bed'
-	})
-	LuckyBlock = Breaker:CreateToggle({
-		Name = 'Break Lucky Block',
-		Default = true
-	})
-	IronOre = Breaker:CreateToggle({
-		Name = 'Break Iron Ore',
-		Default = true
-	})
-	Snow = Breaker:CreateToggle({
-		Name = 'Break Snow',
-		Default = false
-	})
-	Tesla = Breaker:CreateToggle({
-		Name = 'Break Tesla',
-		Default = true
-	})
-	Hive = Breaker:CreateToggle({
-		Name = 'Break Hive',
-		Default = true
-	})
-	Pinata = Breaker:CreateToggle({
-		Name = 'Break Pinata',
-		Default = false
-	})
-	Crops = Breaker:CreateToggle({
-		Name = 'Break Crops',
-		Default = false,
-		Tooltip = 'breaks farmer cletus crops (carrot and etc)'
-	})
-	Effect = Breaker:CreateToggle({
-		Name = 'Show Healthbar & Effects',
-		Default = true,
-		Function = function(callback)
-			if CustomHealth and CustomHealth.Object then
-				CustomHealth.Object.Visible = callback
-			end
-		end
-	})
-	CustomHealth = Breaker:CreateToggle({
-		Name = 'Custom Healthbar',
-		Default = true,
-		Darker = true
-	})
-	Animation = Breaker:CreateToggle({
-		Name = 'Animation',
-		Tooltip = 'plays the swing animation while u dig'
-	})
-	SelfBreak = Breaker:CreateToggle({
-		Name = 'Self Break',
-		Tooltip = 'lets it break ur own bed and blocks u or ur team placed'
-	})
-	AutoTool = Breaker:CreateToggle({
-		Name = 'Auto Tool',
-		Default = true,
-		Tooltip = 'swaps to the right tool on its own, off means it waits till ur holdin it'
-	})
-	LimitItem = Breaker:CreateToggle({
-		Name = 'Limit to items',
-		Tooltip = 'only works while ur holdin sum that can break blocks'
-	})
-	MouseDown = Breaker:CreateToggle({
-		Name = 'Require Mouse Down',
-		Tooltip = 'only digs while u hold left click'
-	})
-	YetiBreaker = Breaker:CreateToggle({
-		Name = 'Yeti Breaker',
-		Tooltip = 'pops the yeti roar whenever ur nuking'
-	})
-	RagnarBreaker = Breaker:CreateToggle({
-		Name = 'Ragnar',
-		Tooltip = 'pops the ragnar rage whenever ur nuking'
-	})
-	ShowPath = Breaker:CreateToggle({
-		Name = 'Show Path',
-		Default = true,
-		Tooltip = 'shows u the blocks its diggin thru'
-	})
-	BlockHighlight = Breaker:CreateToggle({
-		Name = 'Block Highlight',
-		Default = false,
-		Function = function(callback)
-			if BreakerHighlightColor and BreakerHighlightColor.Object then
-				BreakerHighlightColor.Object.Visible = callback
-			end
-			if not callback and blockHighlightInstance then
-				blockHighlightInstance.Adornee = nil
-			end
-		end,
-		Tooltip = 'boxes the block its hittin rn'
-	})
-	BreakerHighlightColor = Breaker:CreateColorSlider({
-		Name = 'Highlight Color',
-		Darker = true,
-		Visible = false
-	})
-	task.defer(function()
-		if CustomHealth and CustomHealth.Object and Effect then
-			CustomHealth.Object.Visible = Effect.Enabled
-		end
-		if BedCheck and BedCheck.Object and Bed then
-			BedCheck.Object.Visible = Bed.Enabled
-		end
-		if BreakerHighlightColor and BreakerHighlightColor.Object and BlockHighlight then
-			BreakerHighlightColor.Object.Visible = BlockHighlight.Enabled
-		end
-		if TargetMode and TargetMode.Object and Mode then
-			TargetMode.Object.Visible = Mode.Value ~= 'Legit'
-		end
-	end)
-end)
+run(function()
+	local Nuker
+	local TargetMode
+	local Mode
+	local Range
+	local BreakSpeed
+	local UpdateRate
+	local Bed
+	local BedCheck
+	local LuckyBlock
+	local IronOre
+	local Tesla
+	local Hive
+	local Pinata
+	local Crops
+	local Effect
+	local CustomHealth = {}
+	local Animation
+	local SelfBreak
+	local LimitItem
+	local AutoTool
+	local Snow
+	local ShowPath
+	local BlockHighlight
+	local NukerHighlightColor
+	local NukerAngle
+	local ClearPath
+	local BlockBreakMode
 
+	local blockHighlightInstance
+	local parts = {}
+	local cachedTeammates = {}
+	local cachedTeammatesTime = 0
+	local breakabilityCache = {}
+	local BREAK_CACHE_TTL = 0.35
+
+	local legitRoute = {}
+	local legitTarget = nil
+	local legitAnchor = nil
+	local legitLastPlayerPos = nil
+	local legitLastHit = 0
+
+	local _hbMounted = nil
+	local _hbPart = nil
+	local _hbProgressRef = nil
+	local _hbBlock = nil
+
+	local function screenPoint()
+		if inputService.TouchEnabled then
+			return gameCamera.ViewportSize / 2
+		end
+		return inputService:GetMouseLocation()
+	end
+
+	local function frontPoint()
+		local root = entitylib.character and entitylib.character.RootPart
+		if not root then return nil end
+		local look = gameCamera.CFrame.LookVector * Vector3.new(1, 0, 1)
+		if look.Magnitude < 0.01 then return root.Position end
+		return root.Position + look.Unit * 5
+	end
+
+	local function cleanupHealthbar()
+		if _hbMounted then
+			pcall(bedwars.Roact.unmount, _hbMounted)
+			_hbMounted = nil
+		end
+		if _hbPart then
+			pcall(function() _hbPart:Destroy() end)
+			_hbPart = nil
+		end
+		_hbProgressRef = nil
+		_hbBlock = nil
+		local stray = workspace:FindFirstChild('AeroNukerHB')
+		while stray do
+			pcall(function() stray:Destroy() end)
+			stray = workspace:FindFirstChild('AeroNukerHB')
+		end
+	end
+
+	local function customHealthbar(self, blockRef, health, maxHealth, changeHealth, block)
+		if not Nuker or not Nuker.Enabled or not Effect.Enabled or not CustomHealth.Enabled then return end
+		if not block or not block.Parent then
+			cleanupHealthbar()
+			return
+		end
+		if block:GetAttribute('NoHealthbar') then return end
+		if health <= 0 then
+			cleanupHealthbar()
+			return
+		end
+
+		maxHealth = maxHealth or block:GetAttribute('MaxHealth') or 100
+		health = health or block:GetAttribute('Health') or maxHealth
+
+		if _hbBlock ~= block or not _hbPart or not _hbPart.Parent then
+			cleanupHealthbar()
+			_hbBlock = block
+			local create = bedwars.Roact.createElement
+			local percent = math.clamp(health / maxHealth, 0, 1)
+			_hbProgressRef = bedwars.Roact.createRef()
+			local part = Instance.new('Part')
+			part.Name = 'AeroNukerHB'
+			part.Size = Vector3.one
+			part.CFrame = CFrame.new(block.Position + Vector3.new(0, 1.5, 0))
+			part.Transparency = 1
+			part.Anchored = true
+			part.CanCollide = false
+			part.Parent = workspace
+			_hbPart = part
+			pcall(function() bedwars.QueryUtil:setQueryIgnored(part, true) end)
+
+			local displayName = (bedwars.ItemMeta[block.Name] and bedwars.ItemMeta[block.Name].displayName) or block.Name
+
+			_hbMounted = bedwars.Roact.mount(create('BillboardGui', {
+				Size = UDim2.fromOffset(200, 80),
+				StudsOffset = Vector3.new(0, 2.2, 0),
+				Adornee = part,
+				MaxDistance = 50,
+				AlwaysOnTop = true
+			}, {
+				create('Frame', {
+					Size = UDim2.fromOffset(150, 42),
+					Position = UDim2.fromOffset(25, 20),
+					BackgroundColor3 = Color3.fromRGB(20, 20, 25),
+					BackgroundTransparency = 0.25
+				}, {
+					create('UICorner', {CornerRadius = UDim.new(0, 6)}),
+					create('TextLabel', {
+						Size = UDim2.new(1, -16, 0, 16),
+						Position = UDim2.fromOffset(8, 6),
+						BackgroundTransparency = 1,
+						Text = displayName,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						TextColor3 = Color3.fromRGB(255, 255, 255),
+						TextScaled = true,
+						Font = Enum.Font.GothamBold
+					}),
+					create('Frame', {
+						Size = UDim2.new(1, -16, 0, 6),
+						Position = UDim2.fromOffset(8, 26),
+						BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+					}, {
+						create('UICorner', {CornerRadius = UDim.new(1, 0)}),
+						create('Frame', {
+							[bedwars.Roact.Ref] = _hbProgressRef,
+							Size = UDim2.fromScale(percent, 1),
+							BackgroundColor3 = Color3.fromHSV(math.clamp(percent / 3, 0, 0.35), 0.9, 0.9)
+						}, {create('UICorner', {CornerRadius = UDim.new(1, 0)})})
+					})
+				})
+			}), part)
+		end
+
+		local newpercent = math.clamp((health - (changeHealth or 0)) / maxHealth, 0, 1)
+		if _hbProgressRef and _hbProgressRef:getValue() then
+			tweenService:Create(_hbProgressRef:getValue(), TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+				Size = UDim2.fromScale(newpercent, 1),
+				BackgroundColor3 = Color3.fromHSV(math.clamp(newpercent / 3, 0, 0.35), 0.9, 0.9)
+			}):Play()
+		end
 
 		if newpercent <= 0 then
 			cleanupHealthbar()
@@ -38544,4 +38947,3 @@ run(function()
 		Decimal = 100
 	})
 end)
-
