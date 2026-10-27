@@ -1,15 +1,18 @@
 --This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
-local license = _G.NYX_LICENSE or {}
+local license = ... or {}
 if shared.vape then shared.vape:Uninject() end
 license.Key = license.Key or '_key'
+
+-- Enable auto-injection by default
+getgenv().AutoReinjectEnabled = true
 
 -- AUTO UPDATE LOGIC
 local function getLatestCommit()
 	if shared.mxtion_checked then
-		return readfile("NYX/profiles/commit.txt")
+		return readfile("mxtionv4/profiles/commit.txt")
 	end
 	local suc, res = pcall(function()
-		return game:HttpGet("https://api.github.com/repos/nyxv4/nyx/commits/main")
+		return game:HttpGet("https://api.github.com/repos/GlockSwitchMotion/mxtionV4/commits/main")
 	end)
 	if suc and res then
 		local sha = res:match('"sha":"(.-)"')
@@ -24,8 +27,8 @@ end
 local function handleUpdates()
 	local latestCommit = getLatestCommit()
 	local currentCommit = ""
-	if isfile("NYX/profiles/commit.txt") then
-		currentCommit = readfile("NYX/profiles/commit.txt")
+	if isfile("mxtionv4/profiles/commit.txt") then
+		currentCommit = readfile("mxtionv4/profiles/commit.txt")
 	end
 	
 	if latestCommit ~= "main" and latestCommit ~= currentCommit then
@@ -39,12 +42,12 @@ local function handleUpdates()
 				end
 			end
 		end
-		clearFolder("NYX/guis")
-		clearFolder("NYX/games")
-		clearFolder("NYX/libraries")
+		clearFolder("mxtionv4/guis")
+		clearFolder("mxtionv4/games")
+		clearFolder("mxtionv4/libraries")
 		
-		if not isfolder("NYX/profiles") then makefolder("NYX/profiles") end
-		writefile("NYX/profiles/commit.txt", latestCommit)
+		if not isfolder("mxtionv4/profiles") then makefolder("mxtionv4/profiles") end
+		writefile("mxtionv4/profiles/commit.txt", latestCommit)
 		
 		-- Trigger the Vape update notification
 		if currentCommit ~= "" and currentCommit ~= "main" then
@@ -58,14 +61,12 @@ if not shared.vapereload then
 end
 
 local vape
-local originalLoadstring = loadstring
-
 local loadstring = function(...)
-    local res, err = originalLoadstring(...)
-    if err and vape then
-        vape:CreateNotification('NYX', 'Failed to load : '..err, 30, 'alert')
-    end
-    return res
+	local res, err = loadstring(...)
+	if err and vape then
+		vape:CreateNotification('Vape', 'Failed to load : '..err, 30, 'alert')
+	end
+	return res
 end
 
 local queue_on_teleport = queue_on_teleport or queueonteleport or (syn and syn.queue_on_teleport) or function() end
@@ -86,7 +87,7 @@ local httpService = cloneref(game:GetService("HttpService"))
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/nyxv4/nyx/'..readfile('NYX/profiles/commit.txt')..'/'..select(1, path:gsub('NYX/', '')), true)
+			return game:HttpGet('https://raw.githubusercontent.com/GlockSwitchMotion/mxtionV4/'..readfile('mxtionv4/profiles/commit.txt')..'/'..select(1, path:gsub('mxtionv4/', '')), true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
@@ -102,7 +103,7 @@ end
 local function finishLoading()
 	vape.Init = nil
 	if not vape.Load then
-		warn('[NYX] vape.Load is nil skipping load')
+		warn('[mxtionv4] vape.Load is nil skipping load')
 		return
 	end
 	vape:Load()
@@ -114,17 +115,17 @@ local function finishLoading()
 		until vape.Loaded == nil
 	end))
 
-	-- Exact Aerov4 Teleport Queue implementation adapted for NYX
+	-- Teleport Queue implementation adapted for mxtionV4
 	local function buildTeleportScript()
 		if shared.VapeIndependent then return nil end
 
 		local teleportScript = [[
 			repeat task.wait() until game:IsLoaded()
 			shared.vapereload = true
-			if isfile and isfile("NYX/init.lua") then
-				loadstring(readfile("NYX/init.lua"), "init.lua")(_scriptconfig)
+			if isfile and isfile("mxtionv4/init.lua") then
+				loadstring(readfile("mxtionv4/init.lua"), "init.lua")(_scriptconfig)
 			else
-				loadstring(game:HttpGet("https://raw.githubusercontent.com/nyxv4/nyx/main/init.lua"), "init.lua")(_scriptconfig)
+				loadstring(game:HttpGet("https://raw.githubusercontent.com/GlockSwitchMotion/mxtionV4/main/init.lua"), "init.lua")(_scriptconfig)
 			end
 		]]
 
@@ -170,30 +171,31 @@ local function finishLoading()
 
 	if not shared.vapereload then
 		if getgenv().mxtionrole == 'HWID MISMATCH' then
-			vape:CreateNotification('NYX', 'HWID MISMATCH, Go to the script panel to reset hwid', 25, 'alert')
+			vape:CreateNotification('mxtionV4', 'HWID MISMATCH, Go to the script panel to reset hwid', 25, 'alert')
 			getgenv().mxtionrole = ''
 			task.wait(0.1)
 		end
 		if not shared.vapereload then
-			vape:CreateNotification('NYX', (getgenv().mxtionname and `Authenticated as {getgenv().mxtionname} with {getgenv().mxtionrole}, ` or '').. (vape.VapeButton and 'Press the button in the top right' or 'Press '..table.concat(vape.Keybind, ' + '):upper())..' to open GUI', 5)
+			vape:CreateNotification('mxtionV4', (getgenv().mxtionname and `Authenticated as {getgenv().mxtionname} with {getgenv().mxtionrole}, ` or '').. (vape.VapeButton and 'Press the button in the top right' or 'Press '..table.concat(vape.Keybind, ' + '):upper())..' to open GUI', 5)
 			task.delay(0.05 + cloneref(game:GetService('RunService')).PostSimulation:Wait(), function()
 				if shared.updated then
-					vape:CreateNotification('NYX', `Script has updated from {shared.updated} to {readfile('NYX/profiles/commit.txt'):sub(1, 7)}`, 10, 'info')
+					vape:CreateNotification('mxtionV4', `Script has updated from {shared.updated} to {readfile('mxtionv4/profiles/commit.txt'):sub(1, 7)}`, 10, 'info')
 				end
 			end)
-		end	
+		end
+	
 	end
 end
 
-if not isfile('NYX/profiles/gui.txt') then
-	writefile('NYX/profiles/gui.txt', 'new')
+if not isfile('mxtionv4/profiles/gui.txt') then
+	writefile('mxtionv4/profiles/gui.txt', 'new')
 end
-local gui = 'new'--readfile('NYX/profiles/gui.txt')
+local gui = 'new'--readfile('mxtionv4/profiles/gui.txt')
 
-if not isfolder('NYX/assets/'..gui) then
-	makefolder('NYX/assets/'..gui)
+if not isfolder('mxtionv4/assets/'..gui) then
+	makefolder('mxtionv4/assets/'..gui)
 end
-vape = loadstring(downloadFile('NYX/guis/'..gui..'.lua'), 'gui')(license)
+vape = loadstring(downloadFile('mxtionv4/guis/'..gui..'.lua'), 'gui')(license)
 shared.vape = vape
 shared.vapesmooth = true
 _G.vape = vape
@@ -214,26 +216,24 @@ end
 if not shared.VapeIndependent then
 	if not game:IsLoaded() then
 		repeat task.wait() until game:IsLoaded()
-	
 	end
-	
-	loadstring(downloadFile('NYX/games/universal.lua'), 'universal')(license)
+	loadstring(downloadFile('mxtionv4/games/universal.lua'), 'universal')(license)
 	local scriptId = (game.PlaceId == 6872265039 and '6872265039') or (game.GameId == 2619619496 and '6872274481') or tostring(game.GameId)
-	if isfile('NYX/games/'..scriptId..'.lua') then
-		loadstring(readfile('NYX/games/'..scriptId..'.lua'), scriptId)(license)
+	if isfile('mxtionv4/games/'..scriptId..'.lua') then
+		loadstring(readfile('mxtionv4/games/'..scriptId..'.lua'), scriptId)(license)
 	else
 		if not shared.VapeDeveloper then
 			local suc, res = pcall(function()
-				return game:HttpGet('https://raw.githubusercontent.com/nyxv4/nyx/'..readfile('NYX/profiles/commit.txt')..'/games/'..scriptId..'.lua', true)
+				return game:HttpGet('https://raw.githubusercontent.com/GlockSwitchMotion/mxtionV4/'..readfile('mxtionv4/profiles/commit.txt')..'/games/'..scriptId..'.lua', true)
 			end)
 			if suc and res ~= '404: Not Found' then
-				loadstring(downloadFile('NYX/games/'..scriptId..'.lua'), scriptId)(license)
+				loadstring(downloadFile('mxtionv4/games/'..scriptId..'.lua'), scriptId)(license)
 			end
 		end
 	end
-	loadstring(downloadFile('NYX/libraries/premium.lua'), 'premium')(license)
+	loadstring(downloadFile('mxtionv4/libraries/premium.lua'), 'premium')(license)
 	pcall(function()
-		local publib = loadstring(downloadFile('NYX/libraries/publicconfigs.lua'), 'publicconfigs')(license)
+		local publib = loadstring(downloadFile('mxtionv4/libraries/publicconfigs.lua'), 'publicconfigs')(license)
 		if publib and vape then
 			vape.Libraries = vape.Libraries or {}
 			vape.Libraries.publicconfigs = publib
