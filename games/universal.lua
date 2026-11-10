@@ -4002,11 +4002,25 @@ run(function()
 
 	task.spawn(function()
 		pcall(function()
-			local bedwars = vape.Libraries.Bedwars
+			local bedwars = (vape.Libraries and vape.Libraries.Bedwars) or getgenv().bedwars
 			if bedwars and bedwars.ClientStore then
 				ClientStore = bedwars.ClientStore
 			else
-				ClientStore = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib")).import(script, game:GetService("ReplicatedStorage"), "TS", "ui", "store").ClientStore
+				-- BedWars keeps its client store under PlayerScripts, not ReplicatedStorage.TS.
+				-- Bound the waits so a missing client module cannot produce an infinite-yield warning.
+				local deadline = os.clock() + 10
+				local function findChild(parent, name)
+					if not parent then return nil end
+					return parent:FindFirstChild(name) or parent:WaitForChild(name, math.max(0, deadline - os.clock()))
+				end
+
+				local playerScripts = findChild(playersService.LocalPlayer, 'PlayerScripts')
+				local tsFolder = findChild(playerScripts, 'TS')
+				local uiFolder = findChild(tsFolder, 'ui')
+				local storeModule = findChild(uiFolder, 'store')
+				if storeModule then
+					ClientStore = require(storeModule).ClientStore
+				end
 			end
 
 			if bedwars and bedwars.Knit and bedwars.Knit.Controllers then
