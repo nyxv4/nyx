@@ -20619,7 +20619,7 @@ end)
 run(function()
 	local Hitfix 
 
-    HitFix = vape.Categories.Legit:CreateModule({
+    HitFix = vape.Legit:CreateModule({
         Name = 'HitFix',
         Function = function(callback)
             local func = bedwars.SwordController.swingSwordAtMouse
@@ -20653,7 +20653,7 @@ run(function()
     local List
     local NameToId = {}
     
-    WinEffect = vape.Categories.Legit:CreateModule({
+    WinEffect = vape.Legit:CreateModule({
         Name = "WinEffect",
         Function = function(callback)
             if callback then
@@ -20739,7 +20739,7 @@ run(function()
 		tab.strokeThickness = on and 1 or false
 	end
 	
-	DamageIndicator = vape.Categories.Legit:CreateModule({
+	DamageIndicator = vape.Legit:CreateModule({
 		Name = 'DamageIndicator',
 		Function = function(callback)
 			if callback then
@@ -20827,7 +20827,7 @@ end)
 
 run(function()
 	local WhiteHits
-	WhiteHits = vape.Categories.Legit:CreateModule({
+	WhiteHits = vape.Legit:CreateModule({
 		Name = "WhiteHits",
 		Function = function(callback)
 			if callback then
